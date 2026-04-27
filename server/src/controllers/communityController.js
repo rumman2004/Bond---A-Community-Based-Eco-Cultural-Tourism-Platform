@@ -1,0 +1,324 @@
+import { query, getClient } from '../config/db.js';
+import { uploadToCloudinary, deleteFromCloudinary, extractPublicId } from '../config/cloudinary.js';
+import { ApiError } from '../utils/apiError.js';
+import { ApiResponse } from '../utils/apiResponse.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+
+// ─── Get all verified communities (public, explore page) ─────
+export const getCommunities = asyncHandler(async (req, res) => {
+  const {
+    state, tag, search,
+    page  = 1,
+    limit = 12,
+    sort  = 'community_score',
+  } = req.query;
+
+  const parsedLimit  = parseInt(limit);
+  const parsedOffset = (parseInt(page) - 1) * parsedLimit;
+  const params       = [];
+  const filters      = ["c.status = 'verified'"];
+
+  if (state) {
+    params.push(state);
+    filters.push(`c.state = $${params.length}`);
+  }
+  if (tag) {
+    params.push(tag);
+    filters.push(`$${params.length} = ANY(c.sustainability_tags)`);
+  }
+  if (search) {
+    params.push(`%${search}%`);
+    filters.push(`(c.name ILIKE $${params.length} OR c.short_description ILIKE $${params.length})`);
+  }
+
+  const where = filters.join(' AND ');
+
+  // community_score doesn't exist as a column — approximate it via avg_rating + bookings weight
+  const allowedSorts = {
+    community_score: '(c.avg_rating * 0.6 + LEAST(c.total_bookings, 100) * 0.4)',
+    rating:          'c.avg_rating',
+    bookings:        'c.total_bookings',
+  };
+  const orderBy = allowedSorts[sort] || allowedSorts.community_score;
+
+  const countResult = await query(
+    `SELECT COUNT(*) FROM communities c WHERE ${where}`,
+    params
+  );
+  const total = parseInt(countResult.rows[0].count);
+
+  params.push(parsedLimit, parsedOffset);
+
+  // Direct query — replaces missing top_communities view
+  const result = await query(
+    `SELECT c.*
+     FROM communities c
+     WHERE ${where}
+     ORDER BY ${orderBy} DESC
+     LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
+  );
+
+  res.setHeader('X-Total-Count', total);
+  res.json(new ApiResponse(200, {
+    communities: result.rows,
+    pagination: {
+      total,
+      page:  parseInt(page),
+      limit: parsedLimit,
+      pages: Math.ceil(total / parsedLimit),
+    },
+  }));
+});
+
+// ─── Get single community by slug (public, verified only) ────
+export const getCommunityBySlug = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+
+  const result = await query(
+    `SELECT c.*,
+            u.full_name  AS owner_name,
+            u.avatar_url AS owner_avatar
+     FROM communities c
+     JOIN users u ON u.id = c.user_id
+     WHERE c.slug = $1 AND c.status = 'verified'`,
+    [slug]
+  );
+
+  const community = result.rows[0];
+  if (!community) throw new ApiError(404, 'Community not found');
+
+  const tagsResult = await query(
+    `SELECT st.id, st.slug, st.label, st.icon
+     FROM community_sustainability_tags cst
+     JOIN sustainability_tags st ON st.id = cst.tag_id
+     WHERE cst.community_id = $1`,
+    [community.id]
+  );
+
+  community.tags = tagsResult.rows;
+
+  res.json(new ApiResponse(200, { community }));
+});
+
+// ─── Get own community profile (owner, any status) ───────────
+export const getOwnCommunity = asyncHandler(async (req, res) => {
+  const result = await query(
+    `SELECT c.*,
+            u.full_name  AS owner_name,
+            u.avatar_url AS owner_avatar
+     FROM communities c
+     JOIN users u ON u.id = c.user_id
+     WHERE c.user_id = $1`,
+    [req.user.id]
+  );
+
+  const community = result.rows[0];
+  if (!community) throw new ApiError(404, 'Community profile not found');
+
+  const tagsResult = await query(
+    `SELECT st.id, st.slug, st.label, st.icon
+     FROM community_sustainability_tags cst
+     JOIN sustainability_tags st ON st.id = cst.tag_id
+     WHERE cst.community_id = $1`,
+    [community.id]
+  );
+
+  community.tags = tagsResult.rows;
+
+  res.json(new ApiResponse(200, { community }));
+});
+
+// ─── Create community profile (community role) ───────────────
+export const createCommunity = asyncHandler(async (req, res) => {
+  const {
+    name, slug, description, short_description,
+    village, district, state, country,
+    pincode, latitude, longitude,
+    languages_spoken, best_visit_season,
+  } = req.body;
+
+  const existing = await query(
+    'SELECT id FROM communities WHERE user_id = $1',
+    [req.user.id]
+  );
+  if (existing.rowCount > 0) throw new ApiError(409, 'You already have a community profile');
+
+  const slugCheck = await query(
+    'SELECT id FROM communities WHERE slug = $1',
+    [slug]
+  );
+  if (slugCheck.rowCount > 0) throw new ApiError(409, 'Slug already taken');
+
+  const result = await query(
+    `INSERT INTO communities
+       (user_id, name, slug, description, short_description,
+        village, district, state, country, pincode,
+        latitude, longitude, languages_spoken, best_visit_season)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+     RETURNING *`,
+    [
+      req.user.id, name, slug, description, short_description,
+      village, district, state, country ?? 'India', pincode,
+      latitude, longitude, languages_spoken, best_visit_season,
+    ]
+  );
+
+  res.status(201).json(new ApiResponse(201, { community: result.rows[0] }, 'Community created. Awaiting verification.'));
+});
+
+// ─── Update own community ────────────────────────────────────
+export const updateCommunity = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const check = await query('SELECT user_id FROM communities WHERE id = $1', [id]);
+  if (!check.rows[0]) throw new ApiError(404, 'Community not found');
+  if (check.rows[0].user_id !== req.user.id) throw new ApiError(403, 'Not authorized');
+
+  const {
+    name, description, short_description,
+    village, district, state, country,
+    pincode, latitude, longitude,
+    languages_spoken, best_visit_season,
+  } = req.body;
+
+  const result = await query(
+    `UPDATE communities SET
+       name              = COALESCE($1,  name),
+       description       = COALESCE($2,  description),
+       short_description = COALESCE($3,  short_description),
+       village           = COALESCE($4,  village),
+       district          = COALESCE($5,  district),
+       state             = COALESCE($6,  state),
+       country           = COALESCE($7,  country),
+       pincode           = COALESCE($8,  pincode),
+       latitude          = COALESCE($9,  latitude),
+       longitude         = COALESCE($10, longitude),
+       languages_spoken  = COALESCE($11, languages_spoken),
+       best_visit_season = COALESCE($12, best_visit_season)
+     WHERE id = $13
+     RETURNING *`,
+    [
+      name, description, short_description,
+      village, district, state, country,
+      pincode, latitude, longitude,
+      languages_spoken, best_visit_season,
+      id,
+    ]
+  );
+
+  res.json(new ApiResponse(200, { community: result.rows[0] }, 'Community updated'));
+});
+
+// ─── Upload cover image ──────────────────────────────────────
+export const updateCoverImage = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!req.file) throw new ApiError(400, 'No image provided');
+
+  const check = await query(
+    'SELECT user_id, cover_image_url FROM communities WHERE id = $1',
+    [id]
+  );
+  if (!check.rows[0]) throw new ApiError(404, 'Community not found');
+  if (check.rows[0].user_id !== req.user.id) throw new ApiError(403, 'Not authorized');
+
+  const oldUrl = check.rows[0].cover_image_url;
+  if (oldUrl) {
+    const pid = extractPublicId(oldUrl);
+    if (pid) await deleteFromCloudinary(pid).catch(() => {});
+  }
+
+  const uploaded = await uploadToCloudinary(req.file.buffer, 'communities/covers', {
+    transformation: [{ width: 1200, height: 630, crop: 'fill' }],
+  });
+
+  const result = await query(
+    'UPDATE communities SET cover_image_url = $1 WHERE id = $2 RETURNING id, cover_image_url',
+    [uploaded.secure_url, id]
+  );
+
+  res.json(new ApiResponse(200, { community: result.rows[0] }, 'Cover image updated'));
+});
+
+// ─── Update sustainability tags ──────────────────────────────
+export const updateSustainabilityTags = asyncHandler(async (req, res) => {
+  const { id }      = req.params;
+  const { tag_ids } = req.body;
+
+  const check = await query('SELECT user_id FROM communities WHERE id = $1', [id]);
+  if (!check.rows[0]) throw new ApiError(404, 'Community not found');
+  if (check.rows[0].user_id !== req.user.id) throw new ApiError(403, 'Not authorized');
+
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      'DELETE FROM community_sustainability_tags WHERE community_id = $1',
+      [id]
+    );
+    if (tag_ids?.length > 0) {
+      const values = tag_ids.map((_, i) => `($1, $${i + 2})`).join(', ');
+      await client.query(
+        `INSERT INTO community_sustainability_tags (community_id, tag_id) VALUES ${values}`,
+        [id, ...tag_ids]
+      );
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+
+  res.json(new ApiResponse(200, null, 'Sustainability tags updated'));
+});
+
+// ─── Get community dashboard stats (community owner) ─────────
+export const getCommunityStats = asyncHandler(async (req, res) => {
+  const communityResult = await query(
+    'SELECT id, slug, name, status FROM communities WHERE user_id = $1',
+    [req.user.id]
+  );
+  if (!communityResult.rows[0]) throw new ApiError(404, 'Community profile not found');
+
+  const { id: communityId, slug, name, status } = communityResult.rows[0];
+
+  const [statsResult, bookingsResult] = await Promise.all([
+    // Inline query replacing the missing booking_summary_current_month view
+    query(
+      `SELECT
+         COUNT(*)                                            AS total_bookings,
+         COALESCE(SUM(total_amount), 0)                     AS total_revenue,
+         COALESCE(SUM(num_guests), 0)                       AS total_guests,
+         COUNT(*) FILTER (WHERE status = 'confirmed')       AS confirmed_bookings,
+         COUNT(*) FILTER (WHERE status = 'pending')         AS pending_bookings,
+         COUNT(*) FILTER (WHERE status = 'cancelled')       AS cancelled_bookings
+       FROM bookings
+       WHERE community_id = $1
+         AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())`,
+      [communityId]
+    ),
+    query(
+      `SELECT b.id, b.booking_date, b.num_guests, b.total_amount, b.status,
+              u.full_name      AS tourist_name,
+              u.avatar_url     AS tourist_avatar,
+              e.title          AS experience_title
+       FROM bookings b
+       JOIN users u ON u.id = b.tourist_id
+       JOIN experiences e ON e.id = b.experience_id
+       WHERE b.community_id = $1
+       ORDER BY b.created_at DESC LIMIT 5`,
+      [communityId]
+    ),
+  ]);
+
+  res.json(new ApiResponse(200, {
+    id:             communityId,
+    slug,
+    name,
+    status,
+    stats:          statsResult.rows[0] || {},
+    recentBookings: bookingsResult.rows,
+  }));
+});

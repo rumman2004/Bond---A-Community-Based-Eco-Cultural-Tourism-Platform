@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────
+   Bond Design Tokens
+   Tailwind v4 uses @theme to expose CSS vars
+   as Tailwind utilities automatically.
+───────────────────────────────────────────── */
+
+@theme {
+  /* Brand colors */
+  --color-forest-deep: #0F2419;
+  --color-forest: #1C3D2E;
+  --color-forest-mid: #2A5940;
+  --color-forest-light: #3E7A58;
+  --color-forest-muted: #5C8C72;
+  --color-forest-pale: #D4E6DC;
+  --color-forest-soft: #A8CCBA;
+
+  --color-cream-dark: #D9D0C2;
+  --color-cream-mid: #E8E1D5;
+  --color-cream: #F2EDE4;
+  --color-cream-light: #FAF7F2;
+
+  --color-amber: #C8883A;
+  --color-amber-mid: #E8B96A;
+  --color-amber-light: #F5E4CA;
+
+  --color-terracotta: #D4735A;
+  --color-terracotta-mid: #EBB8AA;
+  --color-terracotta-light: #FAF0EC;
+
+  --color-text-dark: #1A2820;
+  --color-text-mid: #3D5448;
+  --color-text-muted: #7A9285;
+
+  /* Border */
+  --color-border-soft: rgba(28, 61, 46, 0.12);
+  --color-border-mid: rgba(28, 61, 46, 0.22);
+
+  /* Radius */
+  --radius-card: 14px;
+  --radius-btn: 9px;
+  --radius-pill: 9999px;
+
+  /* Typography */
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  /* Shadows */
+  --shadow-card: 0 4px 20px rgba(28, 61, 46, 0.08);
+  --shadow-card-hover: 0 12px 32px rgba(28, 61, 46, 0.12);
+  --shadow-modal: 0 24px 64px rgba(15, 36, 25, 0.18);
+}
+
+/* ─────────────────────────────────────────────
+   Base
+───────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-cream);
+  color: var(--color-text-dark);
+  line-height: 1.6;
+}
+
+/* ─────────────────────────────────────────────
+   Typography helpers
+───────────────────────────────────────────── */
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-sans-bond {
+  font-family: var(--font-sans);
+}
+
+/* ─────────────────────────────────────────────
+   Keyframes
+───────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Scrollbar (webkit)
+───────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream-mid);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-forest-soft);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-forest-muted);
+}
+
+/* ─────────────────────────────────────────────
+   Focus visible (accessibility)
+───────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--color-forest-light);
+  outline-offset: 2px;
+}
