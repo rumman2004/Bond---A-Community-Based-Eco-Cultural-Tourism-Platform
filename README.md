@@ -578,7 +578,9 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 <div align="center">
   Made with ❤️ by <strong>Rumman Ahmed & Ashis Chetia & Naman Burakia</strong> &nbsp;·&nbsp; BCA Final Year Project — April 2026
+</div>
 
+<div>
   Profiles:
   - Rumman Ahmed: https://github.com/rumman2004 
   - Ashis Chetia: https://github.com/AshisChetia07
