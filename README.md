@@ -586,5 +586,5 @@ Profiles:
 <br>
   - Rumman Ahmed: https://github.com/rumman2004 <br>
   - Ashis Chetia: https://github.com/AshisChetia07 <br>
-  - Naman Burakia: https://github.com/Naman2004 <br>
+  - Naman Burakia: https://github.com/Namanburakia <br>
 </div>
