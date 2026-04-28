@@ -36,7 +36,7 @@ function CoverUploader({ experienceId, currentUrl, onUploaded }) {
     try {
       if (experienceId) {
         const fd = new FormData();
-        fd.append("cover", file);
+        fd.append("image", file);
         const res = await experienceService.updateCover(experienceId, fd);
         const url = res?.data?.cover_url ?? res?.cover_url;
         if (url) onUploaded(url);
@@ -93,27 +93,61 @@ const EMPTY_FORM = { title: "", description: "", location: "", price: "", durati
 // ─── Experience Form Panel ────────────────────────────────────
 function ExperienceFormPanel({ editing, onSaved, onCancel }) {
   const [form,     setForm]     = useState(editing ? {
-    title:       editing.title        ?? "",
-    description: editing.description  ?? "",
-    location:    editing.location     ?? "",
-    price:       editing.price        ?? "",
-    duration:    editing.duration     ?? "",
-    category:    editing.category     ?? "",
+    title:       editing.title            ?? "",
+    description: editing.description      ?? "",
+    location:    editing.meeting_point    ?? editing.village ?? editing.location ?? "",
+    price:       editing.price_per_person ?? editing.price ?? "",
+    duration:    editing.duration_hours   ?? editing.duration ?? "",
+    category:    editing.category         ?? "",
   } : EMPTY_FORM);
-  const [coverUrl, setCoverUrl] = useState(editing?.cover_url ?? "");
+  const [coverUrl, setCoverUrl] = useState(editing?.cover_image_url ?? editing?.cover_url ?? "");
   const [saving,   setSaving]   = useState(false);
+  const [error,    setError]    = useState("");
+
+  useEffect(() => {
+    if (editing) {
+      setForm({
+        title:       editing.title            ?? "",
+        description: editing.description      ?? "",
+        location:    editing.meeting_point    ?? editing.village ?? editing.location ?? "",
+        price:       editing.price_per_person ?? editing.price ?? "",
+        duration:    editing.duration_hours   ?? editing.duration ?? "",
+        category:    editing.category         ?? "",
+      });
+      setCoverUrl(editing.cover_image_url ?? editing.cover_url ?? "");
+    } else {
+      setForm(EMPTY_FORM);
+      setCoverUrl("");
+    }
+  }, [editing]);
 
   const update = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.category || !form.category.trim()) {
+      setError("Please add at least one Category tag");
+      setSaving(false);
+      return;
+    }
     setSaving(true);
+    setError("");
     try {
       const payload = {
         ...form,
-        price: form.price ? Number(form.price) : undefined,
+        price_per_person: form.price ? Number(form.price) : 0,
+        meeting_point: form.location || undefined,
+        duration_hours: form.duration ? parseFloat(form.duration) : undefined,
         cover_url: coverUrl || undefined,
       };
+      
+      if (!editing?.id) {
+        payload.slug = form.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)+/g, "");
+      }
+
       let saved;
       if (editing?.id) {
         const res = await experienceService.update(editing.id, payload);
@@ -125,6 +159,11 @@ function ExperienceFormPanel({ editing, onSaved, onCancel }) {
       onSaved(saved, !!editing);
     } catch (err) {
       console.error(err);
+      if (err.errors && Array.isArray(err.errors)) {
+        setError(`Validation failed: ${err.errors.map(e => e.message).join(", ")}`);
+      } else {
+        setError(err?.response?.data?.message ?? err?.message ?? "Failed to save experience.");
+      }
     } finally {
       setSaving(false);
     }
@@ -141,13 +180,71 @@ function ExperienceFormPanel({ editing, onSaved, onCancel }) {
         )}
       </div>
 
+      {error && (
+        <div className="rounded-xl px-4 py-3 text-sm mb-4" style={{ backgroundColor: "#5C1A1A", color: "#F2EDE4" }}>
+          {error}
+        </div>
+      )}
       <CoverUploader experienceId={editing?.id} currentUrl={coverUrl} onUploaded={setCoverUrl} />
 
       <Field label="Title"       name="title"       value={form.title}       onChange={update} icon={Tag}        placeholder="e.g. Traditional weaving workshop" required />
       <Field label="Location"    name="location"    value={form.location}    onChange={update} icon={MapPin}     placeholder="e.g. Nagaland" />
       <Field label="Price (₹)"   name="price"       value={form.price}       onChange={update} icon={IndianRupee} type="number" placeholder="1800" />
       <Field label="Duration"    name="duration"    value={form.duration}    onChange={update} icon={Clock}      placeholder="e.g. 3 hours" />
-      <Field label="Category"    name="category"    value={form.category}    onChange={update} icon={Tag}        placeholder="e.g. Craft, Food, Culture" />
+      <div className="group">
+        <label className="block text-xs font-semibold uppercase tracking-widest text-[#9A9285] mb-2">
+          Categories / Tags <span className="text-red-400 ml-1">*</span>
+        </label>
+        
+        {/* Tag Pills */}
+        <div className="flex flex-wrap gap-2 mb-2">
+          {(form.category ? form.category.split(',').map(t => t.trim()).filter(Boolean) : []).map(tag => (
+            <span key={tag} className="flex items-center gap-1 rounded-full bg-[#EEF5F1] px-3 py-1 text-xs font-semibold text-[#1C3D2E] border border-[#D4E5DC]">
+              {tag.charAt(0).toUpperCase() + tag.slice(1)}
+              <button type="button" onClick={() => {
+                const current = form.category.split(',').map(t => t.trim()).filter(Boolean);
+                const next = current.filter(t => t !== tag).join(', ');
+                setForm(f => ({ ...f, category: next }));
+              }} className="hover:text-red-500 transition-colors ml-0.5">
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+
+        <div className="relative">
+          <Tag size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#B8AFA4] group-focus-within:text-[#3E7A58] transition-colors pointer-events-none" />
+          <select
+            value=""
+            onChange={(e) => {
+              if (!e.target.value) return;
+              const current = form.category ? form.category.split(',').map(t => t.trim()).filter(Boolean) : [];
+              if (!current.includes(e.target.value)) {
+                const next = [...current, e.target.value].join(', ');
+                setForm(f => ({ ...f, category: next }));
+              }
+            }}
+            className="w-full rounded-xl border border-[#E0D8CE] bg-white py-2.5 text-sm text-[#1A2820] focus:outline-none focus:border-[#3E7A58] focus:ring-2 focus:ring-[#3E7A58]/10 transition-all"
+            style={{ paddingLeft: "2.5rem", paddingRight: "1rem" }}
+          >
+            <option value="">-- Add Tag / Category --</option>
+            {[
+              'cultural', 'adventure', 'culinary', 'nature', 'craft',
+              'spiritual', 'farming', 'festival', 'wildlife', 'trekking',
+              'food', 'wellness', 'rural', 'heritage', 'art', 'eco',
+              'photography', 'hiking', 'workshop', 'safari', 'homestay', 'history',
+              'music', 'dance', 'sports', 'educational', 'volunteer'
+            ]
+              .filter(cat => !(form.category ? form.category.split(',').map(t => t.trim()).includes(cat) : false))
+              .map(cat => (
+                <option key={cat} value={cat}>
+                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+      </div>
 
       <div className="group">
         <label className="block text-xs font-semibold uppercase tracking-widest text-[#9A9285] mb-2">Description</label>

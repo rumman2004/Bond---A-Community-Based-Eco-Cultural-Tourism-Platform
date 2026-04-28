@@ -31,8 +31,16 @@ export const validateCreateExperience = [
 
   body('category')
     .optional()
-    .isIn(EXPERIENCE_CATEGORIES)
-    .withMessage(`Category must be one of: ${EXPERIENCE_CATEGORIES.join(', ')}`),
+    .trim()
+    .custom((value) => {
+      if (!value) return true;
+      const tags = value.split(',').map(t => t.trim().toLowerCase());
+      const invalid = tags.filter(t => t && !EXPERIENCE_CATEGORIES.includes(t));
+      if (invalid.length > 0) {
+        throw new Error(`Invalid categories: ${invalid.join(', ')}`);
+      }
+      return true;
+    }),
 
   body('difficulty')
     .optional()
@@ -115,8 +123,16 @@ export const validateUpdateExperience = [
 
   body('category')
     .optional()
-    .isIn(EXPERIENCE_CATEGORIES)
-    .withMessage(`Invalid category`),
+    .trim()
+    .custom((value) => {
+      if (!value) return true;
+      const tags = value.split(',').map(t => t.trim().toLowerCase());
+      const invalid = tags.filter(t => t && !EXPERIENCE_CATEGORIES.includes(t));
+      if (invalid.length > 0) {
+        throw new Error(`Invalid categories: ${invalid.join(', ')}`);
+      }
+      return true;
+    }),
 
   body('difficulty')
     .optional()

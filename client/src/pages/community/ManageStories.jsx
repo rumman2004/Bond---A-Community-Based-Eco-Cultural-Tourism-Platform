@@ -31,7 +31,7 @@ function CoverUploader({ storyId, currentUrl, onUploaded }) {
     try {
       if (storyId) {
         const fd = new FormData();
-        fd.append("cover", file);
+        fd.append("image", file);
         const res = await storyService.updateCover(storyId, fd);
         const url = res?.data?.cover_url ?? res?.cover_url;
         if (url) onUploaded(url);
@@ -80,20 +80,30 @@ function StoryFormPanel({ editing, onSaved, onCancel }) {
   });
   const [coverUrl, setCoverUrl] = useState(editing?.cover_url ?? "");
   const [saving,   setSaving]   = useState(false);
+  const [error,    setError]    = useState("");
 
   const update = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError("");
     try {
       const payload = {
         title:     form.title.trim(),
         excerpt:   form.excerpt.trim(),
-        content:   form.content.trim(),
+        body:      form.content.trim(),
         tags:      form.tags ? form.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
         cover_url: coverUrl || undefined,
       };
+      
+      if (!editing?.id) {
+        payload.slug = form.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)+/g, "");
+      }
+
       let saved;
       if (editing?.id) {
         const res = await storyService.update(editing.id, payload);
@@ -105,6 +115,11 @@ function StoryFormPanel({ editing, onSaved, onCancel }) {
       onSaved(saved, !!editing);
     } catch (err) {
       console.error(err);
+      if (err.errors && Array.isArray(err.errors)) {
+        setError(`Validation failed: ${err.errors.map(e => e.message).join(", ")}`);
+      } else {
+        setError(err?.response?.data?.message ?? err?.message ?? "Failed to save story.");
+      }
     } finally {
       setSaving(false);
     }
@@ -121,6 +136,11 @@ function StoryFormPanel({ editing, onSaved, onCancel }) {
         )}
       </div>
 
+      {error && (
+        <div className="rounded-xl px-4 py-3 text-sm mb-4" style={{ backgroundColor: "#5C1A1A", color: "#F2EDE4" }}>
+          {error}
+        </div>
+      )}
       <CoverUploader storyId={editing?.id} currentUrl={coverUrl} onUploaded={setCoverUrl} />
 
       <div className="group">

@@ -11,11 +11,21 @@ export const getExperiences = asyncHandler(async (req, res) => {
     min_price, max_price, tag, search,
     page = 1, limit = 12,
     sort = 'popularity_score',
+    mine,
   } = req.query;
 
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const params = [];
-  const filters = ["e.status = 'active'", "c.status = 'verified'"];
+  let filters = [];
+
+  if (mine === 'true' && req.user) {
+    filters.push("e.status != 'archived'");
+    params.push(req.user.id);
+    filters.push(`c.user_id = $${params.length}`);
+  } else {
+    filters.push("e.status = 'active'");
+    filters.push("c.status = 'verified'");
+  }
 
   if (community_id) { params.push(community_id); filters.push(`e.community_id = $${params.length}`); }
   if (category)     { params.push(category);     filters.push(`e.category = $${params.length}`); }

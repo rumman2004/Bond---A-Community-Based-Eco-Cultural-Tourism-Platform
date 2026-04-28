@@ -163,7 +163,7 @@ function CoverUploader({ communityId, currentUrl, onUploaded }) {
     try {
       if (communityId) {
         const fd = new FormData();
-        fd.append("cover", file);
+        fd.append("image", file);
         const res = await communityService.updateCover(communityId, fd);
         const url = res?.data?.community?.cover_image_url ?? res?.data?.cover_url ?? res?.cover_url;
         if (url) onUploaded(url);

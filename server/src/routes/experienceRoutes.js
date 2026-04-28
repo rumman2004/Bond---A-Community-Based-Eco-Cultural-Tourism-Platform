@@ -7,7 +7,7 @@ import {
   updateExperienceCover,
   deleteExperience,
 } from '../controllers/experienceController.js';
-import { authenticate } from '../middlewares/authMiddleware.js';
+import { authenticate, optionalProtect } from '../middlewares/authMiddleware.js';
 import { authorize }    from '../middlewares/roleMiddleware.js';
 import { validate }     from '../middlewares/validateRequest.js';
 import { uploadSingle } from '../middlewares/uploadMiddleware.js';
@@ -19,7 +19,7 @@ import {
 const router = Router();
 
 // ── Public ────────────────────────────────────────────────────
-router.get('/',        getExperiences);
+router.get('/',        optionalProtect, getExperiences);
 router.get('/:slug',   getExperienceBySlug);
 
 // ── Community owner only ──────────────────────────────────────

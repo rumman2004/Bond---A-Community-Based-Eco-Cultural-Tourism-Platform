@@ -15,7 +15,7 @@ cloudinary.config({
  * @param {object} options     - Extra Cloudinary upload options
  * @returns {Promise<object>}  - Cloudinary upload result
  */
-export const uploadToCloudinary = (fileBuffer, folder = 'general', options = {}) => {
+export const uploadToCloudinary = (fileBuffer, folder = 'bond', options = {}) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {

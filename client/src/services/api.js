@@ -1,6 +1,18 @@
-import { getToken, removeToken } from "../utils/tokenUtils";
+import { getToken, removeToken, setToken } from "../utils/tokenUtils";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const subscribeTokenRefresh = (cb) => {
+  refreshSubscribers.push(cb);
+};
+
+const onRefreshed = (token) => {
+  refreshSubscribers.map((cb) => cb(token));
+  refreshSubscribers = [];
+};
 
 async function request(endpoint, options = {}) {
   const token = getToken();
@@ -16,7 +28,70 @@ async function request(endpoint, options = {}) {
     headers,
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && endpoint !== "/auth/refresh-token" && endpoint !== "/auth/login") {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      fetch(`${API_BASE_URL}/auth/refresh-token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      })
+        .then(async (refreshRes) => {
+          if (refreshRes.ok) {
+            const refreshData = await refreshRes.json();
+            const newAccessToken = refreshData.data?.accessToken || refreshData.accessToken;
+            if (newAccessToken) {
+              setToken(newAccessToken);
+              onRefreshed(newAccessToken);
+            } else {
+              onRefreshed(null);
+            }
+          } else {
+            onRefreshed(null);
+          }
+        })
+        .catch((err) => {
+          console.error("Token refresh failed:", err);
+          onRefreshed(null);
+        })
+        .finally(() => {
+          isRefreshing = false;
+        });
+    }
+
+    const retryToken = await new Promise((resolve) => {
+      subscribeTokenRefresh((token) => resolve(token));
+    });
+
+    if (retryToken) {
+      const retryHeaders = {
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
+        Authorization: `Bearer ${retryToken}`,
+        ...options.headers,
+      };
+
+      const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers: retryHeaders,
+      });
+
+      const retryContentType = retryResponse.headers.get("content-type") || "";
+      const retryData = retryContentType.includes("application/json")
+        ? await retryResponse.json()
+        : await retryResponse.text();
+
+      if (!retryResponse.ok) {
+        const message = retryData?.message || retryData?.error || "Retry failed";
+        const error = new Error(message);
+        if (retryData?.errors) error.errors = retryData.errors;
+        throw error;
+      }
+
+      return retryData;
+    } else {
+      removeToken();
+    }
+  } else if (response.status === 401) {
     removeToken();
   }
 

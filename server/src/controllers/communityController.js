@@ -285,18 +285,13 @@ export const getCommunityStats = asyncHandler(async (req, res) => {
   const { id: communityId, slug, name, status } = communityResult.rows[0];
 
   const [statsResult, bookingsResult] = await Promise.all([
-    // Inline query replacing the missing booking_summary_current_month view
     query(
-      `SELECT
-         COUNT(*)                                            AS total_bookings,
-         COALESCE(SUM(total_amount), 0)                     AS total_revenue,
-         COALESCE(SUM(num_guests), 0)                       AS total_guests,
-         COUNT(*) FILTER (WHERE status = 'confirmed')       AS confirmed_bookings,
-         COUNT(*) FILTER (WHERE status = 'pending')         AS pending_bookings,
-         COUNT(*) FILTER (WHERE status = 'cancelled')       AS cancelled_bookings
-       FROM bookings
-       WHERE community_id = $1
-         AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())`,
+      `SELECT 
+         (SELECT COUNT(*) FROM bookings WHERE community_id = $1) AS total_bookings,
+         (SELECT COALESCE(SUM(total_amount), 0) FROM bookings WHERE community_id = $1 AND status != 'cancelled') AS total_revenue,
+         (SELECT COUNT(*) FROM experiences WHERE community_id = $1) AS total_experiences,
+         (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE community_id = $1) AS avg_rating,
+         (SELECT COUNT(*) FROM reviews WHERE community_id = $1) AS total_reviews`,
       [communityId]
     ),
     query(
@@ -318,7 +313,7 @@ export const getCommunityStats = asyncHandler(async (req, res) => {
     slug,
     name,
     status,
-    stats:          statsResult.rows[0] || {},
+    ...(statsResult.rows[0] || {}),
     recentBookings: bookingsResult.rows,
   }));
 });

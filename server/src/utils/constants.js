@@ -17,6 +17,9 @@ export const REPORT_STATUSES    = ['open', 'under_review', 'resolved', 'dismisse
 export const EXPERIENCE_CATEGORIES = [
   'cultural', 'adventure', 'culinary', 'nature', 'craft',
   'spiritual', 'farming', 'festival', 'wildlife', 'trekking',
+  'food', 'wellness', 'rural', 'heritage', 'art', 'eco',
+  'photography', 'hiking', 'workshop', 'safari', 'homestay', 'history',
+  'music', 'dance', 'sports', 'educational', 'volunteer'
 ];
 export const EXPERIENCE_DIFFICULTIES = ['easy', 'moderate', 'challenging'];
 

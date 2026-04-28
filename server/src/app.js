@@ -1,7 +1,7 @@
 // ============================================================
 // app.js
 // Express application setup.
-// server.js imports this and calls app.listen().
+// server.js imports this and calls app.listen(). 
 // ============================================================
 
 import express      from 'express';
