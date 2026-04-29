@@ -23,10 +23,31 @@ async function request(endpoint, options = {}) {
     ...options.headers,
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  // Timeout: 90s for file uploads, 30s for everything else
+  const timeoutMs = isFormData ? 90_000 : 30_000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === "AbortError") {
+      throw new Error(
+        isFormData
+          ? "Upload timed out. Please check your connection and try again."
+          : "Request timed out. Please try again."
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (response.status === 401 && endpoint !== "/auth/refresh-token" && endpoint !== "/auth/login") {
     if (!isRefreshing) {
