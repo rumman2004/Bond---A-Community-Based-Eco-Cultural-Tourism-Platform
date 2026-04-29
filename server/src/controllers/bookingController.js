@@ -2,6 +2,11 @@ import { query, getClient } from '../config/db.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { uploadVerificationDocument } from '../services/uploadService.js';
+import { sendBookingConfirmationEmail, sendNewBookingAlertEmail, sendBookingCancellationEmail } from '../services/emailService.js';
+
+// Migration: Ensure id_document_url exists
+query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS id_document_url TEXT`).catch(console.error);
 
 // ─── Create booking (tourist) ────────────────────────────────
 export const createBooking = asyncHandler(async (req, res) => {
@@ -12,9 +17,11 @@ export const createBooking = asyncHandler(async (req, res) => {
   const expResult = await query(
     `SELECT e.id, e.community_id, e.title, e.price_per_person,
             e.max_group_size, e.min_group_size, e.status,
-            c.status AS community_status
+            c.status AS community_status,
+            u.email AS host_email, u.full_name AS host_name
      FROM experiences e
      JOIN communities c ON c.id = e.community_id
+     JOIN users u ON u.id = c.user_id
      WHERE e.id = $1`,
     [experience_id]
   );
@@ -43,16 +50,47 @@ export const createBooking = asyncHandler(async (req, res) => {
 
   const total_amount = exp.price_per_person * num_guests;
 
+  let id_document_url = null;
+  if (req.file) {
+    const uploaded = await uploadVerificationDocument(req.file.buffer, req.user.id);
+    id_document_url = uploaded.url;
+  }
+
   // FIX: Include price_per_person in INSERT — it is a required pricing snapshot column
   const result = await query(
     `INSERT INTO bookings
        (tourist_id, experience_id, community_id, booking_date, num_guests,
-        price_per_person, total_amount, special_requests)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        price_per_person, total_amount, special_requests, id_document_url)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
     [req.user.id, experience_id, exp.community_id, booking_date, num_guests,
-     exp.price_per_person, total_amount, special_requests]
+     exp.price_per_person, total_amount, special_requests, id_document_url]
   );
+
+  const bookingDataForEmail = {
+    id: result.rows[0].id,
+    experienceTitle: exp.title,
+    date: new Date(booking_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    guests: num_guests,
+    totalAmount: total_amount,
+    touristName: req.user.full_name || 'Tourist',
+  };
+
+  // Send Tourist Confirmation Email
+  sendBookingConfirmationEmail({
+    to: req.user.email,
+    name: req.user.full_name || 'Tourist',
+    booking: bookingDataForEmail
+  }).catch(console.error);
+
+  // Send Community Host Alert Email
+  if (exp.host_email) {
+    sendNewBookingAlertEmail({
+      to: exp.host_email,
+      hostName: exp.host_name || 'Community Host',
+      booking: bookingDataForEmail
+    }).catch(console.error);
+  }
 
   res.status(201).json(new ApiResponse(201, { booking: result.rows[0] }, 'Booking created successfully'));
 });
@@ -196,8 +234,13 @@ export const cancelBooking = asyncHandler(async (req, res) => {
   const { cancellation_reason } = req.body;
 
   const result = await query(
-    `SELECT b.tourist_id, b.community_id, b.status
-     FROM bookings b WHERE b.id = $1`,
+    `SELECT b.*,
+            e.title AS experience_title,
+            u.full_name AS tourist_name, u.email AS tourist_email
+     FROM bookings b
+     JOIN experiences e ON e.id = b.experience_id
+     JOIN users u ON u.id = b.tourist_id
+     WHERE b.id = $1`,
     [id]
   );
   const booking = result.rows[0];
@@ -224,6 +267,22 @@ export const cancelBooking = asyncHandler(async (req, res) => {
     [cancellation_reason, cancelledBy, id]
   );
 
+  // Email triggers on cancel
+  const emailPayload = {
+    id: booking.id,
+    experienceTitle: booking.experience_title,
+    date: new Date(booking.booking_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    guests: booking.num_guests,
+    totalAmount: booking.total_amount
+  };
+
+  sendBookingCancellationEmail({
+    to: booking.tourist_email,
+    name: booking.tourist_name || 'Tourist',
+    booking: emailPayload,
+    cancelledBy: cancelledBy === 'tourist' ? 'you' : 'Community Host'
+  }).catch(console.error);
+
   res.json(new ApiResponse(200, null, 'Booking cancelled'));
 });
 
@@ -239,7 +298,14 @@ export const completeBooking = asyncHandler(async (req, res) => {
 // FIX: Fixed param ordering — was [newStatus, id, reason] but query had $1=status, $2=status_col, $3=reason, $4 WHERE id. Rewritten cleanly.
 const updateBookingStatus = async (id, newStatus, requiredCurrentStatus, userId, res, reason = null, cancelledBy = null) => {
   const result = await query(
-    'SELECT b.status, b.community_id FROM bookings b WHERE b.id = $1', [id]
+    `SELECT b.*,
+            e.title AS experience_title,
+            u.full_name AS tourist_name, u.email AS tourist_email
+     FROM bookings b
+     JOIN experiences e ON e.id = b.experience_id
+     JOIN users u ON u.id = b.tourist_id
+     WHERE b.id = $1`,
+    [id]
   );
   const booking = result.rows[0];
   if (!booking) throw new ApiError(404, 'Booking not found');
@@ -275,6 +341,30 @@ const updateBookingStatus = async (id, newStatus, requiredCurrentStatus, userId,
     `UPDATE bookings SET ${setClauses.join(', ')} WHERE id = $${params.length}`,
     params
   );
+
+  // Email triggers on status change
+  const emailPayload = {
+    id: booking.id,
+    experienceTitle: booking.experience_title,
+    date: new Date(booking.booking_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    guests: booking.num_guests,
+    totalAmount: booking.total_amount
+  };
+
+  if (newStatus === 'confirmed') {
+    sendBookingConfirmationEmail({
+      to: booking.tourist_email,
+      name: booking.tourist_name || 'Tourist',
+      booking: emailPayload
+    }).catch(console.error);
+  } else if (newStatus === 'cancelled') {
+    sendBookingCancellationEmail({
+      to: booking.tourist_email,
+      name: booking.tourist_name || 'Tourist',
+      booking: emailPayload,
+      cancelledBy: cancelledBy || 'Community Host'
+    }).catch(console.error);
+  }
 
   res.json(new ApiResponse(200, null, `Booking ${newStatus}`));
 };

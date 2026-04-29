@@ -23,8 +23,8 @@ import multer from 'multer';
 import { ApiError } from '../utils/apiError.js';
 
 // ── Allowed MIME types ────────────────────────────────────────
-const ALLOWED_MIME_TYPES      = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-const ALLOWED_DOC_MIME_TYPES  = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+const ALLOWED_MIME_TYPES      = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/avif'];
+const ALLOWED_DOC_MIME_TYPES  = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/avif'];
 const MAX_FILE_SIZE_MB        = 5;
 const MAX_DOC_SIZE_MB         = 10;
 
@@ -94,10 +94,10 @@ export const uploadMultiple = upload.array('images', 5);
 export const uploadReport = upload.array('evidence', 3);
 
 // ── uploadDocument ────────────────────────────────────────────
-// Accepts a single PDF (or image) in the 'document' field.
-// Max 10 MB. Used by:
+// Accepts multiple PDF (or images) in the 'document' field.
+// Max 10 MB per file. Used by:
 //   communityVerificationController.uploadCommunityDocument
-export const uploadDocument = uploadDoc.single('document');
+export const uploadDocument = uploadDoc.array('document', 10);
 
 // ── uploadOfferingImages ──────────────────────────────────────
 // Accepts up to 5 images in the 'images' field.

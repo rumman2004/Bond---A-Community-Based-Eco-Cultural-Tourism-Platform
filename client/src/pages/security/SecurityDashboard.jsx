@@ -9,7 +9,7 @@ import {
   Clock,
   CheckCircle2,
 } from "lucide-react";
-import securityService from "../../services/securityService";
+import { useSecurity } from "../../context/SecurityContext";
 
 function StatCard({ icon: Icon, label, value, sub, accent, to }) {
   return (
@@ -76,17 +76,7 @@ function Section({ title, children }) {
 }
 
 export default function SecurityDashboard() {
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    securityService
-      .getStats()
-      .then((res) => setStats(res.data))
-      .catch(() => setError("Could not load dashboard stats."))
-      .finally(() => setLoading(false));
-  }, []);
+  const { stats, loading, error } = useSecurity();
 
   const cards = [
     {

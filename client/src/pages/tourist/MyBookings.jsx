@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import {
   Calendar, MapPin, Users, IndianRupee, Clock, CheckCircle,
-  XCircle, AlertCircle, Hourglass, ChevronRight, Inbox
+  XCircle, AlertCircle, Hourglass, ChevronRight, Inbox, FileText,
+  Star
 } from "lucide-react";
 import bookingService from "../../services/bookingService";
 import PageShell from "../PageShell";
+import ReviewModal from "../../components/features/bookings/ReviewModal";
 
 const STATUS_CONFIG = {
   confirmed: { label: "Confirmed", icon: CheckCircle,  bg: "#E5EEE8", text: "#2A4D32", dot: "#4A8B5C" },
@@ -17,10 +19,25 @@ const STATUS_CONFIG = {
 
 const FILTERS = ["all", "pending", "confirmed", "completed", "cancelled"];
 
-function BookingCard({ booking, index }) {
+function BookingCard({ booking, index, onCancel, onReviewOpen }) {
   const ref = useRef(null);
   const cfg = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
   const Icon = cfg.icon;
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async (e) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+    setCancelling(true);
+    try {
+      await bookingService.cancel(booking.id);
+      if (onCancel) onCancel(booking.id);
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || "Failed to cancel booking");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   useEffect(() => {
     gsap.fromTo(ref.current,
@@ -56,7 +73,7 @@ function BookingCard({ booking, index }) {
           </div>
 
           <h3 className="font-semibold text-[#1A2820] text-sm leading-snug truncate" style={{ fontFamily: "'Playfair Display', serif" }}>
-            {booking.title ?? booking.experience?.title ?? "Experience"}
+            {booking.experience_title ?? booking.title ?? booking.experience?.title ?? "Experience"}
           </h3>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-[#9A9285]">
@@ -77,7 +94,7 @@ function BookingCard({ booking, index }) {
           <div className="flex items-center justify-end gap-0.5">
             <IndianRupee size={13} className="text-[#1A2820]" />
             <span className="text-base font-bold text-[#1A2820]" style={{ fontFamily: "'Playfair Display', serif" }}>
-              {(booking.total_price ?? booking.amount)?.toLocaleString("en-IN") ?? "—"}
+              {(booking.total_amount ?? booking.total_price ?? booking.amount)?.toLocaleString("en-IN") ?? "—"}
             </span>
           </div>
           <p className="text-xs text-[#C4B8A8] mt-0.5">total</p>
@@ -90,6 +107,41 @@ function BookingCard({ booking, index }) {
           "{booking.special_requests}"
         </p>
       )}
+
+      {/* ID Proof Visibility */}
+      {booking.id_document_url && (
+        <div className="mt-2 text-xs border-t border-[#F0EBE3] pt-2 flex items-center gap-1.5 text-[#3E7A58]">
+          <FileText size={12} />
+          <a href={booking.id_document_url} target="_blank" rel="noopener noreferrer" className="font-medium underline hover:text-[#1C3D2E] transition-colors">
+            View Attached ID Proof
+          </a>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="mt-3 border-t border-[#F0EBE3] pt-3 flex justify-end gap-2">
+        {/* Rate Action for Completed */}
+        {booking.status?.toLowerCase() === 'completed' && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onReviewOpen(booking); }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-full transition-all bg-[#3E7A58] text-[#F2EDE4] hover:bg-[#2A4D32] shadow-sm"
+          >
+            <Star size={12} className="fill-current" />
+            Rate Experience
+          </button>
+        )}
+
+        {/* Cancel Action for Pending/Confirmed */}
+        {['pending', 'confirmed'].includes(booking.status) && (
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="px-3.5 py-1.5 text-xs font-semibold rounded-full transition-all border border-[#B45C5C] text-[#B45C5C] hover:bg-[#FAEAEA] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {cancelling ? "Cancelling..." : "Cancel Booking"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -99,8 +151,20 @@ export default function MyBookings() {
   const [filter, setFilter]       = useState("all");
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState("");
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  
   const headerRef = useRef(null);
   const filterRef = useRef(null);
+
+  const handleCancelSuccess = (id) => {
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b));
+  };
+
+  const handleReviewSuccess = () => {
+    // Optionally update local state if we want to hide the button
+    // For now, refreshing or showing a toast is fine.
+    alert("Thank you for your review!");
+  };
 
   useEffect(() => {
     const tl = gsap.timeline();
@@ -179,8 +243,24 @@ export default function MyBookings() {
             </div>
           ) : (
             <div className="space-y-3">
-              {filtered.map((b, i) => <BookingCard key={b.id} booking={b} index={i} />)}
+              {filtered.map((b, i) => (
+                <BookingCard 
+                  key={b.id} 
+                  booking={b} 
+                  index={i} 
+                  onCancel={handleCancelSuccess} 
+                  onReviewOpen={setSelectedBooking}
+                />
+              ))}
             </div>
+          )}
+
+          {selectedBooking && (
+            <ReviewModal 
+              booking={selectedBooking} 
+              onClose={() => setSelectedBooking(null)} 
+              onSuccess={handleReviewSuccess}
+            />
           )}
         </div>
       </div>

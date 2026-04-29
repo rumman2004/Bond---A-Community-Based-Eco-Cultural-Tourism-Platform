@@ -11,60 +11,62 @@ import {
   Compass,
 } from "lucide-react";
 
-const SECURITY_NAV = [
-  {
-    group: "Operations",
-    links: [
-      {
-        icon: LayoutDashboard,
-        label: "Dashboard",
-        to: "/security",
-        badge: null,
-      },
-      {
-        icon: CheckCircle,
-        label: "Verify Communities",
-        to: "/security/verify-communities",
-        badge: 3,
-      },
-      {
-        icon: AlertTriangle,
-        label: "Complaints",
-        to: "/security/complaints",
-        badge: 7,
-      },
-      {
-        icon: UserX,
-        label: "Suspended Users",
-        to: "/security/suspended-users",
-        badge: null,
-      },
-    ],
-  },
-  {
-    group: "Monitoring",
-    links: [
-      {
-        icon: Users,
-        label: "Monitor Users",
-        to: "/security/monitor-users",
-        badge: null,
-      },
-      {
-        icon: Compass,
-        label: "Monitor Experiences",
-        to: "/security/monitor-experiences",
-        badge: null,
-      },
-    ],
-  },
-];
-
-// Flatten once at module level so indices are always stable
-const ALL_LINKS = SECURITY_NAV.flatMap(({ links }) => links);
+import { useSecurity } from "../../../context/SecurityContext";
 
 export default function SecuritySidebar({ collapsed = false }) {
+  const { stats } = useSecurity();
   const sidebarRef = useRef(null);
+
+  const SECURITY_NAV = [
+    {
+      group: "Operations",
+      links: [
+        {
+          icon: LayoutDashboard,
+          label: "Dashboard",
+          to: "/security",
+          badge: null,
+        },
+        {
+          icon: CheckCircle,
+          label: "Verify Communities",
+          to: "/security/verify-communities",
+          badge: stats?.pending_communities || null,
+        },
+        {
+          icon: AlertTriangle,
+          label: "Complaints",
+          to: "/security/complaints",
+          badge: stats?.open_reports || null,
+        },
+        {
+          icon: UserX,
+          label: "Suspended Users",
+          to: "/security/suspended-users",
+          badge: stats?.suspended_users || null,
+        },
+      ],
+    },
+    {
+      group: "Monitoring",
+      links: [
+        {
+          icon: Users,
+          label: "Monitor Users",
+          to: "/security/monitor-users",
+          badge: null,
+        },
+        {
+          icon: Compass,
+          label: "Monitor Experiences",
+          to: "/security/monitor-experiences",
+          badge: null,
+        },
+      ],
+    },
+  ];
+
+  const ALL_LINKS = SECURITY_NAV.flatMap(({ links }) => links);
   const itemsRef = useRef(new Array(ALL_LINKS.length).fill(null));
 
   useEffect(() => {

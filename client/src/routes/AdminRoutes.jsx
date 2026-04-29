@@ -11,7 +11,7 @@ import ManageSecurities from "../pages/admin/ManageSecurities";
 
 export default function AdminRoutes() {
   return (
-    <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+    <Route path="/admin" element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
       <Route index element={<AdminDashboard />} />
       <Route path="users" element={<ManageUsers />} />
       <Route path="logs" element={<ActivityLogs />} />

@@ -14,15 +14,15 @@ export const validateCreateExperience = [
     .isLength({ min: 5, max: 255 }).withMessage('Title must be 5–255 characters'),
 
   body('slug')
+    .optional()
     .trim()
-    .notEmpty().withMessage('Slug is required')
     .matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
     .withMessage('Slug must be lowercase letters, numbers, and hyphens only'),
 
   body('description')
     .trim()
     .notEmpty().withMessage('Description is required')
-    .isLength({ min: 50 }).withMessage('Description must be at least 50 characters'),
+    .isLength({ min: 5 }).withMessage('Description must be at least 5 characters'),
 
   body('short_description')
     .optional()
@@ -31,8 +31,8 @@ export const validateCreateExperience = [
 
   body('category')
     .optional()
-    .isIn(EXPERIENCE_CATEGORIES)
-    .withMessage(`Category must be one of: ${EXPERIENCE_CATEGORIES.join(', ')}`),
+    .trim()
+    .isLength({ max: 100 }).withMessage('Category maximum length is 100 characters'),
 
   body('difficulty')
     .optional()
@@ -48,7 +48,7 @@ export const validateCreateExperience = [
     .isInt({ min: 1 }).withMessage('Duration days must be at least 1'),
 
   body('price_per_person')
-    .notEmpty().withMessage('Price per person is required')
+    .optional()
     .isFloat({ min: 0 }).withMessage('Price must be a positive number'),
 
   body('currency')
@@ -115,8 +115,8 @@ export const validateUpdateExperience = [
 
   body('category')
     .optional()
-    .isIn(EXPERIENCE_CATEGORIES)
-    .withMessage(`Invalid category`),
+    .trim()
+    .isLength({ max: 100 }).withMessage('Invalid category length'),
 
   body('difficulty')
     .optional()

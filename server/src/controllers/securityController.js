@@ -2,6 +2,19 @@ import { query } from '../config/db.js';
 import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { sendExperienceFlagWarningEmail } from '../services/emailService.js';
+
+// ─── Get all communities (security monitor) ────────────────────
+export const getAllCommunities = asyncHandler(async (req, res) => {
+  const result = await query(
+    `SELECT c.*,
+            u.full_name AS owner_name, u.email AS owner_email, u.phone AS owner_phone
+     FROM communities c
+     JOIN users u ON u.id = c.user_id
+     ORDER BY c.created_at DESC`
+  );
+  res.json(new ApiResponse(200, { communities: result.rows }));
+});
 
 // ─── Get communities pending verification ─────────────────────
 export const getPendingCommunities = asyncHandler(async (req, res) => {
@@ -138,16 +151,32 @@ export const getSuspendedUsers = asyncHandler(async (req, res) => {
 
 // ─── Get security dashboard stats ────────────────────────────
 export const getSecurityStats = asyncHandler(async (req, res) => {
-  const [pending, openReports, suspended] = await Promise.all([
-    query("SELECT COUNT(*) FROM communities WHERE status = 'pending'"),
-    query("SELECT COUNT(*) FROM reports WHERE status = 'open'"),
+  const [
+    totalUsers, activeUsers, flaggedUsers, suspendedUsers,
+    totalExps, liveExps, reviewExps, flaggedExps
+  ] = await Promise.all([
+    query("SELECT COUNT(*) FROM users WHERE role NOT IN ('admin','security')"),
+    query("SELECT COUNT(*) FROM users WHERE last_login_at >= NOW() - INTERVAL '24 hours' AND role NOT IN ('admin','security')"),
+    query("SELECT COUNT(*) FROM users WHERE status = 'flagged'"),
     query("SELECT COUNT(*) FROM users WHERE status IN ('suspended','banned')"),
+    query("SELECT COUNT(*) FROM experiences"),
+    query("SELECT COUNT(*) FROM experiences WHERE status = 'active'"),
+    query("SELECT COUNT(*) FROM experiences WHERE status = 'pending'"),
+    query("SELECT COUNT(*) FROM experiences WHERE status = 'paused'"),
   ]);
 
   res.json(new ApiResponse(200, {
-    pending_communities: parseInt(pending.rows[0].count),
-    open_reports:        parseInt(openReports.rows[0].count),
-    suspended_users:     parseInt(suspended.rows[0].count),
+    // User stats
+    total_users:     parseInt(totalUsers.rows[0].count),
+    active_today:    parseInt(activeUsers.rows[0].count),
+    flagged_users:   parseInt(flaggedUsers.rows[0].count),
+    suspended_users: parseInt(suspendedUsers.rows[0].count),
+    
+    // Experience stats
+    total_experiences:   parseInt(totalExps.rows[0].count),
+    live_experiences:    parseInt(liveExps.rows[0].count),
+    review_experiences:  parseInt(reviewExps.rows[0].count),
+    flagged_experiences: parseInt(flaggedExps.rows[0].count),
   }));
 });
 
@@ -315,10 +344,35 @@ export const flagExperience = asyncHandler(async (req, res) => {
   if (!reason?.trim()) throw new ApiError(400, 'Reason is required');
 
   const result = await query(
-    "UPDATE experiences SET status = 'paused' WHERE id = $1 RETURNING id, title, status",
+    "UPDATE experiences SET status = 'paused' WHERE id = $1 RETURNING id, title, community_id",
     [id]
   );
   if (!result.rows[0]) throw new ApiError(404, 'Experience not found');
+
+  const exp = result.rows[0];
+
+  // Fetch community owner email
+  const ownerResult = await query(
+    `SELECT u.email, u.full_name, c.name AS community_name
+     FROM communities c
+     JOIN users u ON u.id = c.user_id
+     WHERE c.id = $1`,
+    [exp.community_id]
+  );
+
+  if (ownerResult.rows[0]) {
+    const owner = ownerResult.rows[0];
+    try {
+      await sendExperienceFlagWarningEmail(owner.email, {
+        ownerName: owner.full_name,
+        communityName: owner.community_name,
+        experienceTitle: exp.title,
+        reason: reason
+      });
+    } catch (err) {
+      console.error('Failed to send flag email', err);
+    }
+  }
 
   await query(
     `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, metadata)
@@ -326,7 +380,7 @@ export const flagExperience = asyncHandler(async (req, res) => {
     [req.user.id, id, JSON.stringify({ reason })]
   );
 
-  res.json(new ApiResponse(200, { experience: result.rows[0] }, 'Experience flagged'));
+  res.json(new ApiResponse(200, { experience: exp }, 'Experience flagged and owner notified'));
 });
 
 // ─── Approve an experience (set to active) ────────────────────

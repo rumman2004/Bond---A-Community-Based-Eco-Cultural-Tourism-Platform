@@ -215,6 +215,7 @@ export default function Explore() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery]               = useState(searchParams.get("q") || "");
+  const communityId                     = searchParams.get("community");
   const [activeCategory, setCategory]   = useState("All");
   const [activeRegion, setRegion]       = useState("All Regions");
   const [priceMax, setPriceMax]         = useState(10000);
@@ -238,7 +239,8 @@ export default function Explore() {
 
   useEffect(() => {
     setLoading(true);
-    experienceService.list()
+    const queryStr = communityId ? `community_id=${communityId}` : "";
+    experienceService.list(queryStr)
       .then((res) => {
         const list = res?.data?.experiences || [];
         const mapped = list.map((e) => ({
@@ -249,10 +251,10 @@ export default function Explore() {
           category: e.category || "Cultural",
           tag: e.category || "Cultural",
           tagColor: TAG_COLOR_MAP[e.category] || "forest",
-          rating: parseFloat(e.avg_rating) || 4.5,
-          reviews: e.review_count || 0,
+          rating: e.avg_rating ? parseFloat(e.avg_rating).toFixed(1) : "0.0",
+          reviews: parseInt(e.total_reviews) || 0,
           price: parseFloat(e.price_per_person) || 0,
-          duration: e.duration_days ? `${e.duration_days} day${e.duration_days > 1 ? "s" : ""}` : "1 day",
+          duration: e.duration_days ? `${e.duration_days} day${e.duration_days > 1 ? "s" : ""}` : (e.duration_hours ? `${e.duration_hours} hr` : "N/A"),
           eco: e.eco_certified ?? true,
           img: e.images?.[0]?.image_url || e.cover_image_url || "",
         }));
@@ -260,7 +262,7 @@ export default function Explore() {
       })
       .catch(() => setError("Failed to load experiences"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [communityId]);
 
   // Sync URL query
   useEffect(() => {
@@ -437,7 +439,14 @@ export default function Explore() {
             </button>
 
             <button
-              onClick={() => { setRegion("All Regions"); setPriceMax(10000); setEcoOnly(false); }}
+              onClick={() => {
+                setRegion("All Regions");
+                setPriceMax(10000);
+                setEcoOnly(false);
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete("community");
+                setSearchParams(newParams);
+              }}
               className="text-xs underline ml-auto"
               style={{ color: "var(--color-text-muted)" }}
             >

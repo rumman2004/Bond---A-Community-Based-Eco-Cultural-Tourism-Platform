@@ -94,12 +94,11 @@ export default function TouristNav() {
         }}
       >
         <Link to="/tourist" className="flex items-center gap-2.5 group" onClick={closeMobile}>
-          <span
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] transition-transform duration-200 group-hover:scale-105"
-            style={{ background: "linear-gradient(135deg, var(--color-forest-deep), var(--color-river))" }}
-          >
-            <Map size={15} color="white" strokeWidth={1.8} />
-          </span>
+          <img
+            src="/logo.png"
+            alt="Bond Logo"
+            className="h-10 w-10 object-contain transition-transform duration-200 group-hover:scale-105"
+          />
           <span className="font-display text-lg font-semibold tracking-tight text-[#1C3D2E]">Bond.</span>
         </Link>
 

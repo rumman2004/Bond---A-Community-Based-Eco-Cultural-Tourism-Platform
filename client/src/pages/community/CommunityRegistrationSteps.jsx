@@ -106,7 +106,7 @@ export function Step1BasicInfo({ form, setForm, errors }) {
 // ─── STEP 2 — Team Members + ID Upload ───────────────────────
 const EMPTY_MEMBER = { full_name: "", phone: "", role: "", is_owner: false };
 
-export function Step2TeamAndDocs({ members, setMembers, docFile, setDocFile, savedDocs = [], errors }) {
+export function Step2TeamAndDocs({ members, setMembers, docFiles = [], setDocFiles, savedDocs = [], errors }) {
   const fileRef = useRef(null);
 
   const addMember = () => setMembers((m) => [...m, { ...EMPTY_MEMBER }]);
@@ -114,9 +114,15 @@ export function Step2TeamAndDocs({ members, setMembers, docFile, setDocFile, sav
   const updateMember = (i, field, value) =>
     setMembers((m) => m.map((mem, idx) => (idx === i ? { ...mem, [field]: value } : mem)));
 
-  const handleFile = (e) => {
-    const file = e.target.files?.[0];
-    if (file) setDocFile(file);
+  const handleFiles = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setDocFiles((prev) => [...prev, ...files].slice(0, 10)); // Max 10
+    }
+  };
+
+  const removeDocFile = (idx) => {
+    setDocFiles((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const hasExistingDoc = savedDocs.length > 0;
@@ -209,7 +215,7 @@ export function Step2TeamAndDocs({ members, setMembers, docFile, setDocFile, sav
                 <CheckCircle size={16} className="text-emerald-600 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-emerald-800 truncate">
-                    {doc.doc_type === "id_bundle" ? "ID Bundle" : doc.doc_type}
+                    {doc.doc_type === "id_bundle" ? "ID Document" : doc.doc_type}
                   </p>
                   <p className="text-xs text-emerald-600">
                     Uploaded {new Date(doc.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
@@ -233,42 +239,46 @@ export function Step2TeamAndDocs({ members, setMembers, docFile, setDocFile, sav
       {/* Document Upload */}
       <div>
         <h3 className="text-sm font-semibold text-[#1A2820] mb-1">
-          {hasExistingDoc ? "Upload a New Document (optional)" : "ID Documents (PDF) *"}
+          {hasExistingDoc ? "Upload More ID Documents (optional)" : "ID Documents (Photos or PDF) *"}
         </h3>
         <p className="text-xs text-[#9A9285] mb-3">
           {hasExistingDoc
-            ? "You can replace the existing document by uploading a new one."
-            : "Upload a single PDF containing photocopies of all team members' government-issued IDs (Aadhaar, PAN, Passport, etc.)."}
+            ? "You can upload additional ID photos or documents for new team members."
+            : "Upload photos or PDF copies of all team members' government-issued IDs (Aadhaar, PAN, Passport, etc.)."}
         </p>
 
         {errors.doc && <p className="mb-2 text-xs text-red-500">{errors.doc}</p>}
 
-        <div
-          onClick={() => fileRef.current?.click()}
-          className={`flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 cursor-pointer transition-all ${docFile ? "border-[#3E7A58] bg-[#EEF5F1]" : "border-[#D4C9BB] bg-[#F5F2EE] hover:border-[#3E7A58] hover:bg-[#EEF5F1]"}`}>
-          {docFile ? (
-            <>
-              <FileText size={28} className="text-[#3E7A58]" />
-              <div className="text-center">
-                <p className="text-sm font-semibold text-[#1C3D2E]">{docFile.name}</p>
-                <p className="text-xs text-[#6B7C6E] mt-0.5">{(docFile.size / 1024 / 1024).toFixed(2)} MB</p>
+        <div className="space-y-3">
+          {/* List of pending files */}
+          {docFiles.map((file, idx) => (
+            <div key={idx} className="flex items-center gap-3 rounded-xl border border-[#3E7A58] bg-[#EEF5F1] px-4 py-3">
+              <FileText size={18} className="text-[#3E7A58] shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-[#1C3D2E] truncate">{file.name}</p>
+                <p className="text-[10px] text-[#6B7C6E]">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
               </div>
-              <button type="button" onClick={(e) => { e.stopPropagation(); setDocFile(null); }}
-                className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700">
-                <X size={12} /> Remove
+              <button type="button" onClick={() => removeDocFile(idx)}
+                className="text-red-500 hover:text-red-700 transition-colors">
+                <X size={14} />
               </button>
-            </>
-          ) : (
-            <>
+            </div>
+          ))}
+
+          {/* Upload trigger */}
+          {docFiles.length < 10 && (
+            <div
+              onClick={() => fileRef.current?.click()}
+              className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[#D4C9BB] bg-[#F5F2EE] p-8 cursor-pointer transition-all hover:border-[#3E7A58] hover:bg-[#EEF5F1]">
               <Upload size={28} className="text-[#B8AFA4]" />
               <div className="text-center">
-                <p className="text-sm font-medium text-[#6B7C6E]">Click to upload ID bundle PDF</p>
-                <p className="text-xs text-[#9A9285] mt-0.5">PDF, JPG, PNG · max 10 MB</p>
+                <p className="text-sm font-medium text-[#6B7C6E]">Click to upload IDs</p>
+                <p className="text-xs text-[#9A9285] mt-0.5">Select multiple JPG, PNG or PDF · max 10 MB each</p>
               </div>
-            </>
+            </div>
           )}
         </div>
-        <input ref={fileRef} type="file" accept=".pdf,image/*" className="hidden" onChange={handleFile} />
+        <input ref={fileRef} type="file" multiple accept=".pdf,image/*" className="hidden" onChange={handleFiles} />
       </div>
     </div>
   );

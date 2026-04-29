@@ -8,6 +8,7 @@ import {
   getSuspendedUsers,
   getSecurityStats,
   getCommunityById,
+  getAllCommunities,
   getAllUsers,
   flagUser,
   getAllExperiences,
@@ -27,6 +28,7 @@ router.use(authenticate, authorize('security', 'admin'));
 router.get('/stats', getSecurityStats);
 
 // ── Community verification ────────────────────────────────────
+router.get  ('/communities',               getAllCommunities);
 router.get  ('/communities/pending',       getPendingCommunities);
 router.get  ('/communities/:id',           getCommunityById);
 router.patch('/communities/:id/verify',    verifyCommunity);

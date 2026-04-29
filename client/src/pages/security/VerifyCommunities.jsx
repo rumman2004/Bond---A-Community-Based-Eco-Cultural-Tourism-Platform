@@ -49,7 +49,7 @@ export default function VerifyCommunities() {
     setLoading(true);
     setError(null);
 
-    securityService.getPendingCommunities()
+    securityService.getAllCommunities()
       .then((res) => {
         // FIX: unwrap axios response correctly
         // res.data is the ApiResponse body: { communities: [...] }
@@ -164,16 +164,6 @@ export default function VerifyCommunities() {
               Review and approve community registration applications.
             </p>
           </div>
-          <button
-            onClick={load}
-            style={{
-              display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 500,
-              padding: "8px 16px", borderRadius: 10, border: "1px solid var(--color-border-soft)",
-              background: "#fff", cursor: "pointer", color: "var(--color-text-mid)",
-            }}
-          >
-            <RefreshCw size={13} /> Refresh
-          </button>
         </div>
       </div>
 
@@ -193,32 +183,30 @@ export default function VerifyCommunities() {
             }}
           />
         </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {["all", "pending", "verified", "rejected"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              style={{
-                padding: "8px 14px", borderRadius: 10, fontSize: 12, fontWeight: 600,
-                border: filter === f ? "1.5px solid var(--color-forest)" : "1px solid var(--color-border-soft)",
-                background: filter === f ? "var(--color-forest-pale)" : "#fff",
-                color: filter === f ? "var(--color-forest)" : "var(--color-text-mid)",
-                cursor: "pointer", textTransform: "capitalize",
-              }}
-            >
-              {f === "all" ? "All" : f}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* Stats summary */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
         {[
-          { label: "Total",    count: communities.length,                                             color: "var(--color-forest)" },
-          { label: "Pending",  count: communities.filter((c) => (c.status ?? "pending") === "pending").length, color: "#F59E0B" },
-          { label: "Verified", count: communities.filter((c) => c.status === "verified").length,      color: "#10B981" },
-          { label: "Rejected", count: communities.filter((c) => c.status === "rejected").length,      color: "#EF4444" },
+          { 
+            label: "Total",    
+            count: communities.filter(c => ["pending", "verified"].includes(c.status ?? "pending")).length, 
+            color: "var(--color-forest)" 
+          },
+          { 
+            label: "Pending",  
+            count: communities.filter((c) => (c.status ?? "pending") === "pending").length, 
+            color: "#F59E0B" 
+          },
+          { 
+            label: "Verified", 
+            count: communities.filter((c) => c.status === "verified").length,      
+            color: "#10B981" 
+          },
+          { 
+            label: "Rejected", 
+            count: communities.filter((c) => c.status === "rejected").length,      
+            color: "#EF4444" 
+          },
         ].map((s) => (
           <div key={s.label} style={{
             flex: "1 1 100px", padding: "14px 18px", borderRadius: 14,

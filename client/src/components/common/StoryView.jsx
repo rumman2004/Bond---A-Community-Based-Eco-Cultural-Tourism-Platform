@@ -3,185 +3,18 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { gsap } from "gsap";
 import {
   ChevronLeft, Calendar, Eye, Clock, User,
-  MapPin, ArrowRight, BookOpen, AlertCircle, Tag,
+  MapPin, ArrowRight, BookOpen, AlertCircle, Tag, Share2
 } from "lucide-react";
 import storyService from "../../services/storyService";
 
-/* ─── Scoped styles ─── */
-const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-  .sv-root {
-    font-family: 'DM Sans', sans-serif;
-    background: #F5F2EE;
-    min-height: 100vh;
-    color: #1A1612;
-  }
-
-  /* ── hero ── */
-  .sv-hero {
-    position: relative;
-    height: 480px;
-    overflow: hidden;
-  }
-  @media (max-width: 768px) { .sv-hero { height: 340px; } }
-
-  .sv-hero img {
-    width: 100%; height: 100%; object-fit: cover;
-  }
-
-  .sv-hero-gradient {
-    position: absolute; inset: 0;
-    background: linear-gradient(
-      180deg,
-      rgba(10,8,5,0.08) 0%,
-      rgba(10,8,5,0.0) 30%,
-      rgba(10,8,5,0.55) 70%,
-      rgba(10,8,5,0.88) 100%
-    );
-  }
-
-  .sv-hero-placeholder {
-    width: 100%; height: 100%;
-    display: flex; align-items: center; justify-content: center;
-    background: #1C3D2E; color: #A8CCBA;
-  }
-
-  .sv-back-btn {
-    position: absolute; top: 28px; left: 28px;
-    display: flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 500; letter-spacing: 0.02em;
-    color: rgba(255,255,255,0.88);
-    background: rgba(255,255,255,0.12);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.18);
-    padding: 8px 16px; border-radius: 100px;
-    cursor: pointer; transition: all 0.2s;
-  }
-  .sv-back-btn:hover { background: rgba(255,255,255,0.22); transform: translateX(-3px); }
-
-  .sv-hero-info {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 36px 40px;
-    display: flex; flex-direction: column; gap: 12px;
-  }
-  @media (max-width: 768px) { .sv-hero-info { padding: 24px 20px; } }
-
-  .sv-hero-title {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(1.8rem, 5vw, 3.2rem);
-    font-weight: 700;
-    color: white;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
-    text-shadow: 0 2px 24px rgba(0,0,0,0.4);
-    margin: 0;
-  }
-
-  .sv-hero-meta {
-    display: flex; flex-wrap: wrap; gap: 18px;
-    color: rgba(255,255,255,0.75); font-size: 13px;
-  }
-  .sv-hero-meta span { display: flex; align-items: center; gap: 5px; }
-
-  /* ── stat bar ── */
-  .sv-stat-bar {
-    background: white;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
-    padding: 0 40px;
-    display: flex; align-items: stretch; gap: 0;
-    overflow-x: auto;
-  }
-  @media (max-width: 768px) { .sv-stat-bar { padding: 0 20px; } }
-
-  .sv-stat-item {
-    display: flex; flex-direction: column; align-items: flex-start;
-    padding: 18px 28px 18px 0;
-    border-right: 1px solid rgba(0,0,0,0.07);
-    min-width: 110px; flex-shrink: 0;
-  }
-  .sv-stat-item:first-child { padding-left: 0; }
-  .sv-stat-item:last-child { border-right: none; }
-  .sv-stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #9B8E82; margin-bottom: 4px; }
-  .sv-stat-value { font-size: 20px; font-weight: 600; color: #1A1612; letter-spacing: -0.02em; }
-
-  /* ── layout ── */
-  .sv-layout {
-    max-width: 900px; margin: 0 auto;
-    padding: 48px 40px;
-  }
-  @media (max-width: 768px) { .sv-layout { padding: 32px 20px; } }
-
-  /* ── body ── */
-  .sv-body {
-    font-size: 16px; line-height: 1.85; color: #3D342B;
-    max-width: 720px;
-  }
-  .sv-body p { margin-bottom: 20px; }
-  .sv-body h2 { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: #1A1612; margin: 32px 0 12px; }
-  .sv-body h3 { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 600; color: #1A1612; margin: 24px 0 10px; }
-  .sv-body blockquote {
-    margin: 24px 0; padding: 16px 24px;
-    border-left: 3px solid #2D6A4F;
-    background: #EDFAF2; border-radius: 0 12px 12px 0;
-    font-style: italic; color: #1B4332;
-  }
-  .sv-body ul, .sv-body ol { margin: 12px 0 20px 24px; }
-  .sv-body li { margin-bottom: 8px; }
-
-  /* ── tags ── */
-  .sv-tags {
-    display: flex; flex-wrap: wrap; gap: 8px;
-    margin-top: 32px; padding-top: 24px;
-    border-top: 1px solid rgba(0,0,0,0.08);
-  }
-  .sv-tag {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 12px; font-weight: 500;
-    padding: 5px 14px; border-radius: 100px;
-    background: #EDFAF2; color: #166534;
-    border: 1px solid rgba(0,0,0,0.06);
-  }
-
-  /* ── author card ── */
-  .sv-author-card {
-    margin-top: 40px; padding: 24px;
-    background: white; border-radius: 20px;
-    border: 1px solid rgba(0,0,0,0.07);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
-    display: flex; align-items: center; gap: 16px;
-  }
-  .sv-author-avatar {
-    width: 52px; height: 52px; border-radius: 16px;
-    overflow: hidden; flex-shrink: 0;
-    background: #D4E6DC;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .sv-author-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .sv-author-name { font-size: 15px; font-weight: 600; color: #1A1612; }
-  .sv-author-sub { font-size: 12px; color: #9B8E82; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
-
-  .sv-community-link {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: 600; color: #2D6A4F;
-    background: none; border: none; cursor: pointer;
-    padding: 0; margin-top: 6px;
-    transition: gap 0.2s;
-  }
-  .sv-community-link:hover { gap: 10px; }
-
-  /* ── skeleton ── */
-  .sv-skeleton {
-    border-radius: 12px; animation: svpulse 1.4s ease-in-out infinite;
-    background: linear-gradient(90deg, #EDE9E3 25%, #E5E0D8 50%, #EDE9E3 75%);
-    background-size: 200% 100%;
-  }
-  @keyframes svpulse { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
-`;
-
 /* ── Skeleton ── */
-function Sk({ w = "100%", h = 20 }) {
-  return <div className="sv-skeleton" style={{ width: w, height: h }} />;
+function Skeleton({ className = "" }) {
+  return (
+    <div
+      className={`animate-pulse rounded-xl ${className}`}
+      style={{ background: "var(--color-cream-mid)" }}
+    />
+  );
 }
 
 /* ── Format date ── */
@@ -202,24 +35,30 @@ function readTime(body) {
 
 /* ── Render body with basic paragraph splitting ── */
 function renderBody(body) {
-  if (!body) return <p>No content available.</p>;
+  if (!body) return <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>No content available.</p>;
   return body.split("\n\n").map((para, i) => {
     const trimmed = para.trim();
     if (!trimmed) return null;
-    if (trimmed.startsWith("## ")) return <h2 key={i}>{trimmed.slice(3)}</h2>;
-    if (trimmed.startsWith("### ")) return <h3 key={i}>{trimmed.slice(4)}</h3>;
-    if (trimmed.startsWith("> ")) return <blockquote key={i}>{trimmed.slice(2)}</blockquote>;
-    return <p key={i}>{trimmed}</p>;
+    if (trimmed.startsWith("## ")) return <h2 key={i} className="text-xl mt-8 mb-3" style={{ fontFamily: "var(--font-display)", color: "var(--color-text-dark)" }}>{trimmed.slice(3)}</h2>;
+    if (trimmed.startsWith("### ")) return <h3 key={i} className="text-lg font-semibold mt-6 mb-2" style={{ color: "var(--color-text-dark)" }}>{trimmed.slice(4)}</h3>;
+    if (trimmed.startsWith("> ")) return (
+      <blockquote key={i} className="my-6 p-5 border-l-4 rounded-r-2xl italic" style={{ background: "var(--color-forest-pale)", borderColor: "var(--color-forest)", color: "var(--color-forest)" }}>
+        {trimmed.slice(2)}
+      </blockquote>
+    );
+    return <p key={i} className="text-base leading-relaxed mb-4" style={{ color: "var(--color-text-mid)" }}>{trimmed}</p>;
   });
 }
 
 /* ════════════════════════════════════════════════════════
    MAIN COMPONENT
+   Redesigned to resemble ExperienceDetails.jsx
 ════════════════════════════════════════════════════════ */
 export default function StoryView() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const isCommunityView = location.pathname.startsWith('/community');
 
   const [story, setStory] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -227,14 +66,18 @@ export default function StoryView() {
 
   const heroRef = useRef(null);
   const contentRef = useRef(null);
+  const sidebarRef = useRef(null);
 
   /* ── Entrance animation ── */
   useEffect(() => {
-    const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-    tl.fromTo(heroRef.current, { opacity: 0 }, { opacity: 1, duration: 0.55 })
-      .fromTo(contentRef.current, { opacity: 0, y: 28 }, { opacity: 1, y: 0, duration: 0.5 }, "-=0.2");
-    return () => tl.kill();
-  }, []);
+    if (!loading && story) {
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+      tl.fromTo(heroRef.current, { opacity: 0, scale: 1.02 }, { opacity: 1, scale: 1, duration: 0.7 })
+        .fromTo(contentRef.current, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.55 }, "-=0.3")
+        .fromTo(sidebarRef.current, { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.55 }, "-=0.4");
+      return () => tl.kill();
+    }
+  }, [loading, story]);
 
   /* ── Fetch story ── */
   useEffect(() => {
@@ -250,35 +93,58 @@ export default function StoryView() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({ title: story?.title, url: window.location.href });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+    }
+  };
+
   /* ── Loading ── */
-  if (loading) return (
-    <div className="sv-root">
-      <style>{STYLES}</style>
-      <div style={{ background: "#D4CFC8", height: 480 }} className="sv-skeleton" />
-      <div className="sv-layout">
-        <Sk h={36} w="70%" />
-        <div style={{ marginTop: 16 }}><Sk h={16} /></div>
-        <div style={{ marginTop: 12 }}><Sk h={16} w="85%" /></div>
-        <div style={{ marginTop: 12 }}><Sk h={16} w="60%" /></div>
-        <div style={{ marginTop: 24 }}><Sk h={200} /></div>
+  if (loading) {
+    return (
+      <div style={{ background: "var(--color-cream)", minHeight: "100vh" }}>
+        <div className="pt-24 pb-4 px-5 max-w-6xl mx-auto">
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <div className="max-w-6xl mx-auto px-5 mb-10">
+          <Skeleton className="w-full h-80 md:h-96 rounded-3xl" />
+        </div>
+        <div className="max-w-6xl mx-auto px-5 grid grid-cols-1 lg:grid-cols-3 gap-10">
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            <Skeleton className="h-10 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+          <Skeleton className="h-80 rounded-3xl" />
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   /* ── Error ── */
-  if (error || !story) return (
-    <div className="sv-root" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: 16 }}>
-      <style>{STYLES}</style>
-      <AlertCircle size={40} color="#DC2626" />
-      <p style={{ fontSize: 16, fontWeight: 600 }}>{error || "Story not found"}</p>
-      <button
-        onClick={() => navigate(-1)}
-        style={{ padding: "12px 24px", borderRadius: 100, background: "#2D6A4F", color: "white", border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 }}
+  if (error || !story) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center gap-4 min-h-screen px-5 text-center"
+        style={{ background: "var(--color-cream)" }}
       >
-        Go back
-      </button>
-    </div>
-  );
+        <AlertCircle size={40} style={{ color: "var(--color-terracotta)" }} />
+        <p className="text-lg font-semibold" style={{ color: "var(--color-text-dark)" }}>
+          {error || "Story not found"}
+        </p>
+        <button
+          onClick={() => navigate(-1)}
+          className="px-5 py-2.5 rounded-full text-sm font-semibold"
+          style={{ background: "var(--color-forest)", color: "white" }}
+        >
+          Go back
+        </button>
+      </div>
+    );
+  }
 
   /* ── Derived ── */
   const communityLocation = [story.village, story.state].filter(Boolean).join(", ");
@@ -286,117 +152,188 @@ export default function StoryView() {
   const communityPath = `${inTouristArea ? "/tourist" : ""}/community/${story.community_slug || story.community_id}`;
 
   return (
-    <div className="sv-root">
-      <style>{STYLES}</style>
-
-      {/* ═══ HERO ═══ */}
-      <div ref={heroRef} className="sv-hero">
-        {story.cover_image_url ? (
-          <img src={story.cover_image_url} alt={story.title} />
-        ) : (
-          <div className="sv-hero-placeholder">
-            <BookOpen size={64} />
-          </div>
-        )}
-        <div className="sv-hero-gradient" />
-
-        <button className="sv-back-btn" onClick={() => navigate(-1)}>
-          <ChevronLeft size={14} /> Back
+    <div style={{ background: "var(--color-cream)", minHeight: "100vh" }}>
+      
+      {/* ── BACK NAV ── */}
+      <div className={`${isCommunityView ? "pt-4" : "pt-24"} pb-4 px-5 max-w-6xl mx-auto`}>
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-sm transition-all duration-200 hover:-translate-x-1"
+          style={{ color: "var(--color-text-muted)" }}
+        >
+          <ChevronLeft size={16} /> {isCommunityView ? "Back to Stories" : "Back"}
         </button>
-
-        <div className="sv-hero-info">
-          <h1 className="sv-hero-title">{story.title}</h1>
-          <div className="sv-hero-meta">
-            {story.author_name && (
-              <span><User size={13} />{story.author_name}</span>
-            )}
-            {story.community_name && (
-              <span><MapPin size={13} />{story.community_name}</span>
-            )}
-            {story.published_at && (
-              <span><Calendar size={13} />{formatDate(story.published_at)}</span>
-            )}
-          </div>
-        </div>
       </div>
 
-      {/* ═══ STAT BAR ═══ */}
-      <div className="sv-stat-bar">
-        <div className="sv-stat-item">
-          <span className="sv-stat-label">Views</span>
-          <span className="sv-stat-value">{story.view_count || 0}</span>
-        </div>
-        <div className="sv-stat-item">
-          <span className="sv-stat-label">Read Time</span>
-          <span className="sv-stat-value">{readTime(story.body)}</span>
-        </div>
-        {story.published_at && (
-          <div className="sv-stat-item">
-            <span className="sv-stat-label">Published</span>
-            <span className="sv-stat-value">{formatDate(story.published_at)}</span>
-          </div>
-        )}
-        {communityLocation && (
-          <div className="sv-stat-item">
-            <span className="sv-stat-label">Location</span>
-            <span className="sv-stat-value">{communityLocation}</span>
-          </div>
-        )}
-      </div>
-
-      {/* ═══ CONTENT ═══ */}
-      <div ref={contentRef} className="sv-layout">
-        {/* Excerpt */}
-        {story.excerpt && (
-          <p style={{
-            fontSize: 18, lineHeight: 1.7, color: "#5C4F43",
-            fontStyle: "italic", marginBottom: 32,
-            paddingBottom: 24,
-            borderBottom: "1px solid rgba(0,0,0,0.08)",
-          }}>
-            {story.excerpt}
-          </p>
-        )}
-
-        {/* Body */}
-        <div className="sv-body">
-          {renderBody(story.body)}
-        </div>
-
-        {/* Tags */}
-        {story.tags?.length > 0 && (
-          <div className="sv-tags">
-            {story.tags.map((tag) => (
-              <span key={tag} className="sv-tag">
-                <Tag size={11} />{tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Author card */}
-        <div className="sv-author-card">
-          <div className="sv-author-avatar">
-            {story.author_avatar ? (
-              <img src={story.author_avatar} alt={story.author_name} />
-            ) : (
-              <User size={22} color="#3E7A58" />
-            )}
-          </div>
-          <div>
-            <div className="sv-author-name">{story.author_name || "Community Author"}</div>
-            <div className="sv-author-sub">
-              <MapPin size={11} />
-              {story.community_name || "Community"}
-              {communityLocation && ` · ${communityLocation}`}
+      {/* ── HERO IMAGE ── */}
+      <div className="max-w-6xl mx-auto px-5 mb-10">
+        <div ref={heroRef} className="rounded-3xl overflow-hidden h-80 md:h-[500px] relative shadow-lg">
+          {story.cover_image_url ? (
+            <img
+              src={story.cover_image_url}
+              alt={story.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[#D4E6DC] text-[#3E7A58]">
+              <BookOpen size={64} />
             </div>
-            <button
-              className="sv-community-link"
-              onClick={() => navigate(communityPath)}
-            >
-              Visit community <ArrowRight size={13} />
-            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── MAIN CONTENT GRID ── */}
+      <div className="max-w-6xl mx-auto px-5 pb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          
+          {/* ── LEFT: Story Content ── */}
+          <div ref={contentRef} className="lg:col-span-2 flex flex-col gap-8">
+            
+            {/* Title block */}
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className="text-xs font-semibold px-3 py-1 rounded-full"
+                  style={{ background: "var(--color-forest-pale)", color: "var(--color-forest)" }}
+                >
+                  Story
+                </span>
+                {story.tags?.map(tag => (
+                  <span
+                    key={tag}
+                    className="flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full"
+                    style={{ background: "var(--color-amber-light)", color: "var(--color-amber)" }}
+                  >
+                    <Tag size={11} /> {tag}
+                  </span>
+                ))}
+              </div>
+
+              <h1
+                className="leading-tight"
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: "clamp(2rem, 5vw, 3.5rem)",
+                  color: "var(--color-text-dark)",
+                }}
+              >
+                {story.title}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-4 text-sm" style={{ color: "var(--color-text-muted)" }}>
+                <span className="flex items-center gap-1"><User size={14} />{story.author_name || "Community Author"}</span>
+                <span className="flex items-center gap-1"><Calendar size={14} />{formatDate(story.published_at)}</span>
+                <span className="flex items-center gap-1"><Clock size={14} />{readTime(story.body)}</span>
+                <span className="flex items-center gap-1"><Eye size={14} />{story.view_count || 0} views</span>
+              </div>
+            </div>
+
+            {/* Excerpt */}
+            {story.excerpt && (
+              <p 
+                className="text-lg italic leading-relaxed border-b pb-6" 
+                style={{ color: "var(--color-text-mid)", borderColor: "var(--color-border-soft)" }}
+              >
+                {story.excerpt}
+              </p>
+            )}
+
+            {/* Body */}
+            <div className="story-body-content">
+              {renderBody(story.body)}
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="flex pt-6 border-t" style={{ borderColor: "var(--color-border-soft)" }}>
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold border transition-all duration-200 hover:bg-black/5"
+                style={{ borderColor: "var(--color-border-mid)", color: "var(--color-text-dark)" }}
+              >
+                <Share2 size={16} /> Share this story
+              </button>
+            </div>
           </div>
+
+          {/* ── RIGHT: Sidebar (Author/Community Info) ── */}
+          <div className="lg:col-span-1">
+            <div
+              ref={sidebarRef}
+              className="sticky top-24 rounded-3xl p-6 flex flex-col gap-6"
+              style={{
+                background: "var(--color-cream-light)",
+                border: "1px solid var(--color-border-mid)",
+                boxShadow: "var(--shadow-card)",
+              }}
+            >
+              <h3 
+                className="text-lg font-semibold" 
+                style={{ fontFamily: "var(--font-display)", color: "var(--color-text-dark)" }}
+              >
+                About the Author
+              </h3>
+
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center shrink-0 shadow-sm" style={{ background: "var(--color-forest-pale)" }}>
+                  {story.author_avatar ? (
+                    <img src={story.author_avatar} alt={story.author_name} className="w-full h-full object-cover" />
+                  ) : (
+                    <User size={32} style={{ color: "var(--color-forest)" }} />
+                  )}
+                </div>
+                <div>
+                  <p className="font-bold text-base" style={{ color: "var(--color-text-dark)" }}>
+                    {story.author_name || "Community Member"}
+                  </p>
+                  <p className="text-xs uppercase tracking-wider font-semibold mt-0.5" style={{ color: "var(--color-forest-muted)" }}>
+                    Contributor
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 py-4 border-y" style={{ borderColor: "var(--color-border-soft)" }}>
+                <div className="flex items-start gap-3 text-sm">
+                  <MapPin size={16} className="mt-0.5 shrink-0" style={{ color: "var(--color-forest)" }} />
+                  <div>
+                    <p className="font-semibold" style={{ color: "var(--color-text-dark)" }}>Location</p>
+                    <p style={{ color: "var(--color-text-muted)" }}>{communityLocation || "Northeast India"}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 text-sm">
+                  <BookOpen size={16} className="mt-0.5 shrink-0" style={{ color: "var(--color-forest)" }} />
+                  <div>
+                    <p className="font-semibold" style={{ color: "var(--color-text-dark)" }}>Community</p>
+                    <p style={{ color: "var(--color-text-muted)" }}>{story.community_name}</p>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => navigate(communityPath)}
+                className="w-full py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:brightness-105 active:scale-95"
+                style={{ background: "var(--color-forest)", color: "white" }}
+              >
+                Visit Community <ArrowRight size={16} />
+              </button>
+
+              <div className="pt-2">
+                <p className="text-[10px] uppercase tracking-[0.15em] font-bold mb-3 text-center" style={{ color: "var(--color-text-muted)" }}>
+                  Story Insights
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl text-center" style={{ background: "var(--color-cream)" }}>
+                    <p className="text-[10px] font-bold uppercase" style={{ color: "var(--color-text-muted)" }}>Views</p>
+                    <p className="text-lg font-bold" style={{ color: "var(--color-forest-deep)" }}>{story.view_count || 0}</p>
+                  </div>
+                  <div className="p-3 rounded-xl text-center" style={{ background: "var(--color-cream)" }}>
+                    <p className="text-[10px] font-bold uppercase" style={{ color: "var(--color-text-muted)" }}>Read</p>
+                    <p className="text-lg font-bold" style={{ color: "var(--color-forest-deep)" }}>{readTime(story.body).split(' ')[0]}m</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>

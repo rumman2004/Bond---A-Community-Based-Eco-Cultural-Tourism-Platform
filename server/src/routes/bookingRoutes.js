@@ -12,6 +12,7 @@ import {
 import { authenticate } from '../middlewares/authMiddleware.js';
 import { authorize }    from '../middlewares/roleMiddleware.js';
 import { validate }     from '../middlewares/validateRequest.js';
+import { handleUpload, uploadDocument } from '../middlewares/uploadMiddleware.js';
 import { createBookingSchema } from '../validators/bookingValidator.js';
 
 const router = Router();
@@ -20,7 +21,7 @@ const router = Router();
 router.use(authenticate);
 
 // ── Tourist ───────────────────────────────────────────────────
-router.post('/',        authorize('tourist'), validate(createBookingSchema), createBooking);
+router.post('/', authorize('tourist'), handleUpload(uploadDocument), validate(createBookingSchema), createBooking);
 router.get ('/my',      authorize('tourist'), getMyBookings);
 
 // ── Community owner ───────────────────────────────────────────

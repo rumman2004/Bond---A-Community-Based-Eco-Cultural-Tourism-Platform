@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "gsap";
 import {
-  Search, Filter, ChevronDown, RefreshCw,
-  Star, MapPin, Eye, Flag, CheckCircle, XCircle,
+  Search,
+  Star, MapPin, Flag, CheckCircle, XCircle,
   Compass, TrendingUp, AlertOctagon, Clock,
-  ArrowUpRight, Loader2, Leaf,
+  Loader2
 } from "lucide-react";
 import securityService from "../../services/securityService";
 
@@ -38,7 +38,7 @@ function SkeletonRow() {
 }
 
 /* ── Stat card ── */
-function StatCard({ label, value, delta, icon: Icon, color, loading }) {
+function StatCard({ label, value, icon: Icon, color, loading }) {
   const ref = useRef(null);
   useEffect(() => {
     gsap.fromTo(ref.current,
@@ -67,13 +67,8 @@ function StatCard({ label, value, delta, icon: Icon, color, loading }) {
         <div className="flex items-end gap-2">
           <span className="text-3xl font-bold tracking-tight"
             style={{ color: "var(--color-text-dark)", fontFamily: "var(--font-display)" }}>
-            {value ?? "—"}
+            {value ?? "0"}
           </span>
-          {delta != null && (
-            <span className="text-xs font-semibold pb-1" style={{ color: "var(--color-forest)" }}>
-              {delta} <ArrowUpRight size={10} style={{ display: "inline" }} />
-            </span>
-          )}
         </div>
       )}
     </div>
@@ -98,7 +93,7 @@ function ConfirmModal({ exp, actionType, onConfirm, onCancel, submitting }) {
           </h3>
           <p className="text-sm mt-1" style={{ color: "var(--color-text-muted)" }}>
             {actionType === "approve" && `Approve "${exp.title}"? It will go live on the platform.`}
-            {actionType === "flag"    && `Flag "${exp.title}" for review.`}
+            {actionType === "flag"    && `Flag "${exp.title}" for review. A warning email will be sent to the owner.`}
             {actionType === "suspend" && `Suspend "${exp.title}"? It will be hidden from travellers.`}
           </p>
         </div>
@@ -106,13 +101,13 @@ function ConfirmModal({ exp, actionType, onConfirm, onCancel, submitting }) {
           <div>
             <label className="block text-xs font-semibold uppercase tracking-widest mb-2"
               style={{ color: "var(--color-text-muted)" }}>
-              Reason <span style={{ color: "var(--color-terracotta)" }}>*</span>
+              Reason for Warning <span style={{ color: "var(--color-terracotta)" }}>*</span>
             </label>
             <textarea
               rows={3}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Provide a reason…"
+              placeholder="Explain why this experience is being flagged..."
               className="w-full rounded-xl px-4 py-3 text-sm resize-none outline-none"
               style={{
                 background: "var(--color-cream)",
@@ -174,7 +169,6 @@ function ExperienceRow({ exp, index, onAction }) {
       onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-cream-mid)")}
       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
     >
-      {/* Experience */}
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex-shrink-0 overflow-hidden"
@@ -196,27 +190,23 @@ function ExperienceRow({ exp, index, onAction }) {
           </div>
         </div>
       </td>
-      {/* Category */}
       <td className="px-4 py-3.5 hidden sm:table-cell">
         <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
           style={{ background: cs.bg, color: cs.color }}>
           {exp.category || "Cultural"}
         </span>
       </td>
-      {/* Location */}
       <td className="px-4 py-3.5 hidden md:table-cell">
         <span className="flex items-center gap-1 text-xs" style={{ color: "var(--color-text-muted)" }}>
           <MapPin size={11} />{location}
         </span>
       </td>
-      {/* Status */}
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: ss.dot }} />
           <span className="text-[11px] font-bold" style={{ color: ss.color }}>{ss.label}</span>
         </div>
       </td>
-      {/* Rating */}
       <td className="px-4 py-3.5 hidden lg:table-cell">
         {rating ? (
           <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: "var(--color-text-dark)" }}>
@@ -230,7 +220,6 @@ function ExperienceRow({ exp, index, onAction }) {
           <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>No ratings</span>
         )}
       </td>
-      {/* Price */}
       <td className="px-4 py-3.5 hidden lg:table-cell">
         {price ? (
           <>
@@ -247,13 +236,11 @@ function ExperienceRow({ exp, index, onAction }) {
           <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>—</span>
         )}
       </td>
-      {/* Bookings */}
       <td className="px-4 py-3.5 hidden xl:table-cell">
         <span className="text-xs font-semibold" style={{ color: "var(--color-text-dark)" }}>
-          {exp.booking_count ?? "—"}
+          {exp.booking_count ?? "0"}
         </span>
       </td>
-      {/* Reports */}
       <td className="px-4 py-3.5">
         {exp.report_count > 0 ? (
           <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
@@ -264,7 +251,6 @@ function ExperienceRow({ exp, index, onAction }) {
           <span className="text-xs" style={{ color: "var(--color-text-muted)" }}>—</span>
         )}
       </td>
-      {/* Actions */}
       <td className="px-4 py-3.5">
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {exp.status === "under_review" && (
@@ -275,7 +261,7 @@ function ExperienceRow({ exp, index, onAction }) {
             </button>
           )}
           {(exp.status === "live" || exp.status === "under_review") && (
-            <button title="Flag" onClick={() => onAction("flag", exp)}
+            <button title="Flag & Warn" onClick={() => onAction("flag", exp)}
               className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-black/8 transition-colors"
               style={{ color: "#F59E0B" }}>
               <Flag size={14} />
@@ -304,9 +290,7 @@ export default function MonitorExperiences() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [error, setError]               = useState(null);
 
-  const [search, setSearch]                 = useState("");
-  const [statusFilter, setStatusFilter]     = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [search, setSearch] = useState("");
 
   const [modal, setModal]         = useState(null); // { type, exp }
   const [submitting, setSubmitting] = useState(false);
@@ -321,22 +305,22 @@ export default function MonitorExperiences() {
   }, []);
 
   /* ── Fetch stats ── */
-  useEffect(() => {
+  const fetchStats = () => {
     setStatsLoading(true);
     securityService.getStats()
       .then((res) => setStats(res.data))
       .catch(() => {})
       .finally(() => setStatsLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { fetchStats(); }, []);
 
   /* ── Fetch experiences ── */
   const fetchExperiences = useCallback(() => {
     setLoading(true);
     setError(null);
     const params = new URLSearchParams();
-    if (statusFilter !== "all")   params.set("status", statusFilter);
-    if (categoryFilter !== "all") params.set("category", categoryFilter);
-    if (search)                   params.set("search", search);
+    if (search) params.set("search", search);
 
     securityService.getAllExperiences(params.toString())
       .then((res) => {
@@ -345,7 +329,7 @@ export default function MonitorExperiences() {
       })
       .catch((err) => setError(err?.response?.data?.message ?? "Failed to load experiences."))
       .finally(() => setLoading(false));
-  }, [statusFilter, categoryFilter, search]);
+  }, [search]);
 
   useEffect(() => {
     const t = setTimeout(fetchExperiences, search ? 350 : 0);
@@ -369,11 +353,12 @@ export default function MonitorExperiences() {
 
       showToast(
         type === "approve" ? `"${exp.title}" is now live.` :
-        type === "flag"    ? `"${exp.title}" flagged for review.` :
+        type === "flag"    ? `Warning sent to owner. "${exp.title}" flagged.` :
                              `"${exp.title}" has been suspended.`
       );
       setModal(null);
       fetchExperiences();
+      fetchStats();
     } catch (e) {
       showToast(e?.response?.data?.message ?? "Action failed. Please try again.");
     } finally {
@@ -383,13 +368,11 @@ export default function MonitorExperiences() {
 
   /* ── Derived stats ── */
   const statCards = [
-    { label: "Total Experiences", value: stats?.total_experiences,    delta: stats?.exp_delta,      icon: Compass,       color: "var(--color-forest)" },
-    { label: "Live Now",          value: stats?.live_experiences,      delta: stats?.live_delta,     icon: TrendingUp,    color: "#10B981" },
-    { label: "Under Review",      value: stats?.review_experiences,    delta: null,                  icon: Clock,         color: "#6366F1" },
-    { label: "Flagged",           value: stats?.flagged_experiences,   delta: null,                  icon: AlertOctagon,  color: "var(--color-terracotta)" },
+    { label: "Total Experiences", value: stats?.total_experiences,    icon: Compass,       color: "var(--color-forest)" },
+    { label: "Live Now",          value: stats?.live_experiences,     icon: TrendingUp,    color: "#10B981" },
+    { label: "Under Review",      value: stats?.review_experiences,   icon: Clock,         color: "#6366F1" },
+    { label: "Flagged",           value: stats?.flagged_experiences,  icon: AlertOctagon,  color: "var(--color-terracotta)" },
   ];
-
-  const CATEGORIES = ["Cultural", "Eco", "Adventure", "Wellness", "Culinary"];
 
   return (
     <div className="min-h-screen px-6 py-8" style={{ background: "var(--color-cream)" }}>
@@ -425,15 +408,6 @@ export default function MonitorExperiences() {
               Oversee listings, review flags, and manage experience quality across the platform.
             </p>
           </div>
-          <button
-            onClick={fetchExperiences}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:brightness-95 disabled:opacity-60"
-            style={{ background: "var(--color-forest)", color: "white" }}
-          >
-            {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-            Refresh
-          </button>
         </div>
       </div>
 
@@ -466,31 +440,6 @@ export default function MonitorExperiences() {
             {search && (
               <button onClick={() => setSearch("")} style={{ color: "var(--color-text-muted)" }}>×</button>
             )}
-          </div>
-          <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl"
-            style={{ background: "var(--color-cream)", border: "1px solid var(--color-border-soft)" }}>
-            <Filter size={13} style={{ color: "var(--color-text-muted)" }} />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-transparent outline-none text-sm appearance-none pr-4"
-              style={{ color: "var(--color-text-dark)" }}>
-              <option value="all">All Status</option>
-              <option value="live">Live</option>
-              <option value="under_review">Under Review</option>
-              <option value="flagged">Flagged</option>
-              <option value="suspended">Suspended</option>
-            </select>
-            <ChevronDown size={12} style={{ color: "var(--color-text-muted)" }} />
-          </div>
-          <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl"
-            style={{ background: "var(--color-cream)", border: "1px solid var(--color-border-soft)" }}>
-            <Leaf size={13} style={{ color: "var(--color-text-muted)" }} />
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
-              className="bg-transparent outline-none text-sm appearance-none pr-4"
-              style={{ color: "var(--color-text-dark)" }}>
-              <option value="all">All Categories</option>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-            <ChevronDown size={12} style={{ color: "var(--color-text-muted)" }} />
           </div>
           {!loading && (
             <span className="ml-auto text-xs" style={{ color: "var(--color-text-muted)" }}>
@@ -542,7 +491,7 @@ export default function MonitorExperiences() {
                     <tr>
                       <td colSpan={9} className="text-center py-16">
                         <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
-                          No experiences match your filters.
+                          No experiences match your search.
                         </p>
                       </td>
                     </tr>
@@ -556,7 +505,6 @@ export default function MonitorExperiences() {
         <div className="px-5 py-3 flex items-center justify-between text-xs"
           style={{ borderTop: "1px solid var(--color-border-soft)", color: "var(--color-text-muted)" }}>
           <span>{loading ? "Loading…" : `${experiences.length} experiences loaded`}</span>
-          <span>Filters: {statusFilter} · {categoryFilter}</span>
         </div>
       </div>
     </div>

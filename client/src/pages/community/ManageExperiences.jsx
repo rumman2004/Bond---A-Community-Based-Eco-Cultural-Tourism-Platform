@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Pencil, Trash2, Upload, CheckCircle, AlertCircle, MapPin, Clock, Tag, IndianRupee, X } from "lucide-react";
 import PageShell from "../PageShell";
 import experienceService from "../../services/experienceService";
@@ -71,6 +72,7 @@ function CoverUploader({ experienceId, currentUrl, currentImages = [], onUploade
           : <div className="flex flex-col items-center gap-1.5 text-[#9A9285]">
               <Upload size={20} />
               <p className="text-xs font-medium">Upload up to 5 photos</p>
+              <p className="text-[10px] opacity-60">1920×1080 recommended for best quality</p>
             </div>
         }
         {uploading && (
@@ -155,11 +157,9 @@ function ExperienceFormPanel({ editing, onSaved, onCancel }) {
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E8E1D5] p-5 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#1A2820]">{editing ? "Edit experience" : "New experience"}</h2>
-        {editing && (
-          <button type="button" onClick={onCancel} className="text-[#9A9285] hover:text-[#1A2820] transition-colors">
-            <X size={16} />
-          </button>
-        )}
+        <button type="button" onClick={onCancel} className="text-[#9A9285] hover:text-[#1A2820] transition-colors">
+          <X size={16} />
+        </button>
       </div>
 
       <CoverUploader experienceId={editing?.id} currentUrl={coverUrl} currentImages={editing?.images || []} onUploaded={setCoverUrl} />
@@ -200,8 +200,12 @@ function ExperienceFormPanel({ editing, onSaved, onCancel }) {
 
 // ─── Experience Card ──────────────────────────────────────────
 function ExperienceCard({ exp, onEdit, onDelete, deleting }) {
+  const navigate = useNavigate();
   return (
-    <div className="flex gap-3 rounded-2xl border border-[#E8E1D5] bg-white p-4 items-start">
+    <div
+      onClick={() => navigate(`/community/experience/${exp.slug || exp.id}`)}
+      className="flex gap-3 rounded-2xl border border-[#E8E1D5] bg-white p-4 items-start cursor-pointer hover:border-[#3E7A58]/40 transition-all"
+    >
       {(exp.images?.[0]?.image_url || exp.cover_image_url || exp.cover_url) ? (
         <img src={exp.images?.[0]?.image_url || exp.cover_image_url || exp.cover_url} alt={exp.title} className="w-16 h-16 rounded-xl object-cover shrink-0" />
       ) : (
@@ -212,13 +216,13 @@ function ExperienceCard({ exp, onEdit, onDelete, deleting }) {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-[#1A2820] truncate">{exp.title}</p>
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-[#9A9285]">
-          {exp.location  && <span className="flex items-center gap-1"><MapPin size={10} />{exp.location}</span>}
-          {exp.price     && <span className="flex items-center gap-1"><IndianRupee size={10} />₹{Number(exp.price).toLocaleString("en-IN")}</span>}
-          {exp.duration  && <span className="flex items-center gap-1"><Clock size={10} />{exp.duration}</span>}
-          {exp.category  && <span className="flex items-center gap-1"><Tag size={10} />{exp.category}</span>}
+          {exp.location && <span className="flex items-center gap-1"><MapPin size={10} />{exp.location}</span>}
+          {exp.price && <span className="flex items-center gap-1"><IndianRupee size={10} />₹{Number(exp.price).toLocaleString("en-IN")}</span>}
+          {exp.duration && <span className="flex items-center gap-1"><Clock size={10} />{exp.duration}</span>}
+          {exp.category && <span className="flex items-center gap-1"><Tag size={10} />{exp.category}</span>}
         </div>
       </div>
-      <div className="flex gap-1.5 shrink-0">
+      <div className="flex gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
         <button onClick={() => onEdit(exp)}
           className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#E0D8CE] text-[#9A9285] hover:border-[#3E7A58] hover:text-[#3E7A58] transition-all">
           <Pencil size={13} />

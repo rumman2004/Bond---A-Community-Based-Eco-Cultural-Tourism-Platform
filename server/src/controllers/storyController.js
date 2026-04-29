@@ -6,12 +6,13 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 // ─── Get published stories (public) ──────────────────────────
 export const getStories = asyncHandler(async (req, res) => {
-  const { community_id, tag, search, featured, page = 1, limit = 12 } = req.query;
+  const { community_id, community_slug, tag, search, featured, page = 1, limit = 12 } = req.query;
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const params = [];
   const filters = ["s.status = 'published'"];
 
   if (community_id) { params.push(community_id); filters.push(`s.community_id = $${params.length}`); }
+  if (community_slug) { params.push(community_slug); filters.push(`c.slug = $${params.length}`); }
   if (tag)          { params.push(tag);          filters.push(`$${params.length} = ANY(s.tags)`); }
   if (featured === 'true') filters.push('s.is_featured = TRUE');
   if (search)       { params.push(`%${search}%`); filters.push(`s.title ILIKE $${params.length}`); }
@@ -35,7 +36,9 @@ export const getStories = asyncHandler(async (req, res) => {
   );
 
   const countResult = await query(
-    `SELECT COUNT(*) FROM stories s WHERE ${where}`,
+    `SELECT COUNT(*) FROM stories s
+     JOIN communities c ON c.id = s.community_id
+     WHERE ${where}`,
     params
   );
 
@@ -79,9 +82,10 @@ export const getMyCommunityStories = asyncHandler(async (req, res) => {
   const commResult = await query('SELECT id FROM communities WHERE user_id = $1', [req.user.id]);
   if (!commResult.rows[0]) throw new ApiError(404, 'Community not found');
 
-  // FIX: Was views — schema column is view_count
+  // FIX: Was views — schema column is view_count, added cover_image_url
   const result = await query(
-    `SELECT id, title, slug, status, view_count, published_at, created_at
+    `SELECT id, title, slug, status, view_count, published_at, created_at,
+            cover_image_url, cover_image_url AS cover_url
      FROM stories WHERE community_id = $1 ORDER BY created_at DESC`,
     [commResult.rows[0].id]
   );
@@ -98,16 +102,25 @@ export const createStory = asyncHandler(async (req, res) => {
   if (!commResult.rows[0]) throw new ApiError(403, 'Verified community required');
   const communityId = commResult.rows[0].id;
 
-  const { title, slug, body, excerpt, tags } = req.body;
+  const { title, slug, body, content, excerpt, tags, cover_url, cover_image_url } = req.body;
+  const imgUrl = cover_url || cover_image_url || null;
+  
+  const realBody = body || content || '';
+  let realSlug = slug || title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+  if (!realSlug) {
+    realSlug = `story-${Date.now()}`;
+  }
 
-  const slugCheck = await query('SELECT id FROM stories WHERE slug = $1', [slug]);
-  if (slugCheck.rowCount > 0) throw new ApiError(409, 'Slug already taken');
+  const slugCheck = await query('SELECT id FROM stories WHERE slug = $1', [realSlug]);
+  if (slugCheck.rowCount > 0) {
+    realSlug = `${realSlug}-${Date.now()}`;
+  }
 
   const result = await query(
-    `INSERT INTO stories (community_id, author_id, title, slug, body, excerpt, tags)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO stories (community_id, author_id, title, slug, body, excerpt, tags, status, published_at, cover_image_url)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'published', NOW(), $8)
      RETURNING *`,
-    [communityId, req.user.id, title, slug, body, excerpt, tags]
+    [communityId, req.user.id, title, realSlug, realBody, excerpt, tags, imgUrl]
   );
 
   res.status(201).json(new ApiResponse(201, { story: result.rows[0] }, 'Story created'));
@@ -121,21 +134,25 @@ export const updateStory = asyncHandler(async (req, res) => {
   if (!check.rows[0]) throw new ApiError(404, 'Story not found');
   if (check.rows[0].author_id !== req.user.id) throw new ApiError(403, 'Not authorized');
 
-  const { title, body, excerpt, tags, status } = req.body;
+  const { title, body, content, excerpt, tags, status, cover_url, cover_image_url } = req.body;
+  const imgUrl = cover_url || cover_image_url;
   const allowedStatuses = ['draft', 'published', 'archived'];
   if (status && !allowedStatuses.includes(status)) throw new ApiError(400, 'Invalid status');
 
+  const realBody = body !== undefined ? body : content;
+
   const result = await query(
     `UPDATE stories SET
-       title        = COALESCE($1, title),
-       body         = COALESCE($2, body),
-       excerpt      = COALESCE($3, excerpt),
-       tags         = COALESCE($4, tags),
-       status       = COALESCE($5, status),
-       published_at = CASE WHEN $5 = 'published' AND published_at IS NULL THEN NOW() ELSE published_at END
-     WHERE id = $6
+       title            = COALESCE($1, title),
+       body             = COALESCE($2, body),
+       excerpt          = COALESCE($3, excerpt),
+       tags             = COALESCE($4, tags),
+       status           = COALESCE($5, status),
+       published_at     = CASE WHEN $5 = 'published' AND published_at IS NULL THEN NOW() ELSE published_at END,
+       cover_image_url  = COALESCE($6, cover_image_url)
+     WHERE id = $7
      RETURNING *`,
-    [title, body, excerpt, tags, status, id]
+    [title, realBody !== undefined ? realBody : null, excerpt, tags, status, imgUrl, id]
   );
 
   res.json(new ApiResponse(200, { story: result.rows[0] }, 'Story updated'));

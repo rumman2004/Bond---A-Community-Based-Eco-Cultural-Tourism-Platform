@@ -71,11 +71,6 @@ function StatCard({ label, value, delta, icon: Icon, color, loading }) {
             style={{ color: "var(--color-text-dark)", fontFamily: "var(--font-display)" }}>
             {value ?? "—"}
           </span>
-          {delta != null && (
-            <span className="text-xs font-semibold pb-1" style={{ color: "var(--color-forest)" }}>
-              {delta} <ArrowUpRight size={10} style={{ display: "inline" }} />
-            </span>
-          )}
         </div>
       )}
     </div>
@@ -396,17 +391,6 @@ export default function MonitorUsers() {
               Review activity, flags, and account health across all platform users.
             </p>
           </div>
-          <button
-            onClick={fetchUsers}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:brightness-95 disabled:opacity-60"
-            style={{ background: "var(--color-forest)", color: "white" }}
-          >
-            {loading
-              ? <Loader2 size={14} className="animate-spin" />
-              : <RefreshCw size={14} />}
-            Refresh
-          </button>
         </div>
       </div>
 

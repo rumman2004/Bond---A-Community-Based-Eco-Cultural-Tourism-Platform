@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Pencil, Trash2, Upload, CheckCircle, AlertCircle, BookOpen, Calendar, X, Eye } from "lucide-react";
 import PageShell from "../PageShell";
 import storyService from "../../services/storyService";
@@ -114,11 +115,9 @@ function StoryFormPanel({ editing, onSaved, onCancel }) {
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#E8E1D5] p-5 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-[#1A2820]">{editing ? "Edit story" : "Write a story"}</h2>
-        {editing && (
-          <button type="button" onClick={onCancel} className="text-[#9A9285] hover:text-[#1A2820] transition-colors">
-            <X size={16} />
-          </button>
-        )}
+        <button type="button" onClick={onCancel} className="text-[#9A9285] hover:text-[#1A2820] transition-colors">
+          <X size={16} />
+        </button>
       </div>
 
       <CoverUploader storyId={editing?.id} currentUrl={coverUrl} onUploaded={setCoverUrl} />
@@ -164,12 +163,10 @@ function StoryFormPanel({ editing, onSaved, onCancel }) {
             : <CheckCircle size={14} />}
           {editing ? "Save changes" : "Publish story"}
         </button>
-        {editing && (
-          <button type="button" onClick={onCancel}
-            className="rounded-xl border border-[#E0D8CE] px-4 py-2.5 text-sm font-medium text-[#9A9285] hover:bg-[#F5F2EE] transition-all">
-            Cancel
-          </button>
-        )}
+        <button type="button" onClick={onCancel}
+          className="rounded-xl border border-[#E0D8CE] px-4 py-2.5 text-sm font-medium text-[#9A9285] hover:bg-[#F5F2EE] transition-all">
+          Cancel
+        </button>
       </div>
     </form>
   );
@@ -177,17 +174,21 @@ function StoryFormPanel({ editing, onSaved, onCancel }) {
 
 // ─── Story card ───────────────────────────────────────────────
 function StoryCard({ story, onEdit, onDelete, deleting }) {
+  const navigate = useNavigate();
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
   const tags = Array.isArray(story.tags) ? story.tags : [];
 
   return (
-    <div className="rounded-2xl border border-[#E8E1D5] bg-white overflow-hidden flex flex-col sm:flex-row">
+    <div 
+      onClick={() => navigate(`/community/story/${story.slug || story.id}`)}
+      className="rounded-2xl border border-[#E8E1D5] bg-white overflow-hidden flex flex-col sm:flex-row shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer hover:border-[#3E7A58]/40"
+    >
       {story.cover_url ? (
         <img src={story.cover_url} alt={story.title}
-          className="h-32 w-full object-cover sm:h-auto sm:w-28 shrink-0" />
+          className="h-44 w-full object-cover sm:w-48 sm:h-auto shrink-0" />
       ) : (
-        <div className="h-32 sm:h-auto sm:w-28 shrink-0 bg-[#E8F0EC] flex items-center justify-center">
-          <BookOpen size={24} className="text-[#3E7A58]" />
+        <div className="h-44 sm:w-48 shrink-0 bg-[#E8F0EC] flex items-center justify-center">
+          <BookOpen size={28} className="text-[#3E7A58]" />
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 p-4">
@@ -206,13 +207,7 @@ function StoryCard({ story, onEdit, onDelete, deleting }) {
           <span className="flex items-center gap-1 text-xs text-[#B8AFA4]">
             <Calendar size={10} />{fmtDate(story.created_at)}
           </span>
-          <div className="flex gap-1.5">
-            {story.slug && (
-              <a href={`/stories/${story.slug}`} target="_blank" rel="noreferrer"
-                className="flex h-7 w-7 items-center justify-center rounded-xl border border-[#E0D8CE] text-[#9A9285] hover:border-[#3E7A58] hover:text-[#3E7A58] transition-all">
-                <Eye size={12} />
-              </a>
-            )}
+          <div className="flex gap-1.5" onClick={e => e.stopPropagation()}>
             <button onClick={() => onEdit(story)}
               className="flex h-7 w-7 items-center justify-center rounded-xl border border-[#E0D8CE] text-[#9A9285] hover:border-[#3E7A58] hover:text-[#3E7A58] transition-all">
               <Pencil size={12} />
@@ -234,6 +229,7 @@ export default function ManageStories() {
   const [stories,  setStories]  = useState([]);
   const [editing,  setEditing]  = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [previewStory, setPreviewStory] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);

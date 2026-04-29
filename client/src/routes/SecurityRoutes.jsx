@@ -12,7 +12,7 @@ import OfficerProfile from "../pages/security/OfficerProfile";
 
 export default function SecurityRoutes() {
   return (
-    <Route path="/security" element={<ProtectedRoute><SecurityLayout /></ProtectedRoute>}>
+    <Route path="/security" element={<ProtectedRoute role="security"><SecurityLayout /></ProtectedRoute>}>
       <Route index element={<SecurityDashboard />} />
       <Route path="verify-communities" element={<VerifyCommunities />} />
       <Route path="verify-communities/:id" element={<ReviewCommunityDetails />} />

@@ -78,10 +78,6 @@ html {
 
 body {
   font-family: var(--font-body);
-  background:
-    linear-gradient(180deg, rgba(250, 247, 242, 0.96), rgba(242, 237, 228, 0.98)),
-    radial-gradient(circle at 12% 0%, rgba(37, 109, 133, 0.12), transparent 34%),
-    radial-gradient(circle at 92% 10%, rgba(200, 136, 58, 0.12), transparent 30%);
   background-color: var(--color-cream);
   color: var(--color-text-dark);
   line-height: 1.6;
@@ -117,10 +113,7 @@ img {
 }
 
 .app-shell-bg {
-  background:
-    linear-gradient(180deg, rgba(250, 247, 242, 0.98), rgba(242, 237, 228, 0.98)),
-    radial-gradient(circle at 15% 10%, rgba(37, 109, 133, 0.10), transparent 28%),
-    radial-gradient(circle at 85% 0%, rgba(200, 136, 58, 0.11), transparent 24%);
+  background-color: var(--color-cream);
 }
 
 .surface-panel {

@@ -15,6 +15,8 @@ import CommunityRoutes from './CommunityRoutes';
 import SecurityRoutes from './SecurityRoutes';
 import AdminRoutes from './AdminRoutes';
 import StoryView from '../components/common/StoryView';
+import ProtectedRoute from './ProtectedRoute';
+import ConfirmBooking from '../pages/tourist/ConfirmBooking';
 
 const AppRoutes = () => {
   return (
@@ -29,6 +31,7 @@ const AppRoutes = () => {
         <Route path="/auth/login" element={<Login />} />
         <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        <Route path="/booking/:id" element={<ProtectedRoute><ConfirmBooking /></ProtectedRoute>} />
       </Route>
 
       {TouristRoutes()}

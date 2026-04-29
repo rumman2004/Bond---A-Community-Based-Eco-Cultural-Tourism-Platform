@@ -74,22 +74,21 @@ export default function PublicNav() {
       <nav
         className="mx-auto flex h-14 max-w-7xl items-center justify-between rounded-[12px] px-3.5 sm:px-5"
         style={{
-          backgroundColor: scrolled ? "rgba(250,247,242,0.92)" : "rgba(250,247,242,0.76)",
-          backdropFilter: "blur(16px)",
-          border: "1px solid rgba(28,61,46,0.12)",
-          boxShadow: scrolled ? "0 12px 32px rgba(28,61,46,0.10)" : "0 6px 20px rgba(28,61,46,0.06)",
-          transition: "background-color 0.25s, box-shadow 0.25s",
+          backgroundColor: scrolled ? "rgba(242,237,228,0.95)" : "transparent",
+          backdropFilter: scrolled ? "blur(16px)" : "none",
+          border: scrolled ? "1px solid rgba(28,61,46,0.12)" : "1px solid transparent",
+          boxShadow: scrolled ? "0 12px 32px rgba(28,61,46,0.10)" : "none",
+          transition: "all 0.4s ease",
         }}
       >
 
         {/* ── Logo ── */}
         <Link to={isTourist ? "/tourist" : "/"} className="flex items-center gap-2.5 group" onClick={closeMobile}>
-          <span
-            className="w-9 h-9 rounded-[10px] flex items-center justify-center transition-transform duration-200 group-hover:scale-105"
-            style={{ background: "linear-gradient(135deg, var(--color-forest-deep), var(--color-river))" }}
-          >
-            <Map size={15} color="white" strokeWidth={1.8} />
-          </span>
+          <img
+            src="/logo.png"
+            alt="Bond Logo"
+            className="h-10 w-10 object-contain transition-transform duration-200 group-hover:scale-105"
+          />
           <span
             className="text-lg font-semibold tracking-tight"
             style={{ fontFamily: "var(--font-display)", color: "var(--color-forest-deep)" }}

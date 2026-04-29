@@ -340,7 +340,7 @@ export default function About() {
           <div className="text-center mb-14">
             <p
               className="text-xs font-semibold tracking-widest uppercase mb-2"
-              style={{ color: "var(--color-terracotta)" }}
+              style={{ color: "var(--color-text-dark)" }}
             >
               The people behind Bond
             </p>
@@ -388,13 +388,13 @@ export default function About() {
               >
                 Get Started Free
               </Button>
-              <Button
+              <button
                 onClick={() => navigate("/explore")}
                 className="px-8 py-3.5 rounded-full text-sm font-semibold border transition-all duration-200 hover:bg-forest/5"
                 style={{ borderColor: "var(--color-border-mid)", color: "var(--color-forest)" }}
               >
                 Browse Experiences
-              </Button>
+              </button>
             </div>
           </FadeUp>
         </div>

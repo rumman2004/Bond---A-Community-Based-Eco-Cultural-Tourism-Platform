@@ -33,6 +33,7 @@ async function request(endpoint, options = {}) {
     response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
+      credentials: "include",
       signal: controller.signal,
     });
   } catch (err) {
@@ -94,6 +95,7 @@ async function request(endpoint, options = {}) {
       const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers: retryHeaders,
+        credentials: "include",
       });
 
       const retryContentType = retryResponse.headers.get("content-type") || "";

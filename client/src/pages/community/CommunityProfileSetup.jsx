@@ -203,8 +203,8 @@ function CoverUploader({ communityId, currentUrl, currentImages = [], onUploaded
         ) : (
           <div className="flex flex-col items-center gap-2 text-[#9A9285]">
             <Upload size={24} />
-            <p className="text-sm font-medium">Upload cover photo</p>
-            <p className="text-xs">Select up to 5 JPG/PNG images · 1200×630 recommended</p>
+            <p className="text-sm font-medium">Upload cover photos</p>
+            <p className="text-xs">Select up to 5 JPG/PNG images · 1920×1080 recommended for best quality</p>
           </div>
         )}
         {uploading && (

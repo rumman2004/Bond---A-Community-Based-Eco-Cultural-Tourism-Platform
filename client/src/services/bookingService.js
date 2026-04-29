@@ -8,7 +8,7 @@ const bookingService = {
   confirm: (id) => api.patch(`/bookings/${id}/confirm`),
   reject: (id) => api.patch(`/bookings/${id}/reject`),
   complete: (id) => api.patch(`/bookings/${id}/complete`),
-  cancel: (id, reason) => api.patch(`/bookings/${id}/cancel`, { reason }),
+  cancel: (id, reason) => api.patch(`/bookings/${id}/cancel`, { cancellation_reason: reason }),
 };
 
 export default bookingService;

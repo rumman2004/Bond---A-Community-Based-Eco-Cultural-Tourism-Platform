@@ -45,10 +45,8 @@ export default function Earnings() {
     ])
       .then(([sRes, bRes]) => {
         setStats(sRes?.data ?? sRes);
-        const list = bRes?.data?.bookings ?? bRes?.bookings ?? bRes ?? [];
-        // Only show completed bookings with amounts for earnings ledger
-        const completed = Array.isArray(list) ? list.filter(b => b.total_amount > 0) : [];
-        setBookings(completed.slice(0, 20));
+        const list = Array.isArray(bRes?.data?.bookings) ? bRes.data.bookings : (Array.isArray(bRes?.bookings) ? bRes.bookings : (Array.isArray(bRes) ? bRes : []));
+        setBookings(list);
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
@@ -57,9 +55,18 @@ export default function Earnings() {
   const s = stats ?? {};
 
   // Derive payout breakdown from stats or bookings
-  const totalRevenue  = s.total_revenue  ?? null;
-  const pendingAmount = s.pending_amount ?? null;
-  const paidOut       = s.paid_out       ?? null;
+  // Derive payout breakdown dynamically from local bookings state
+  const pendingAmount = Array.isArray(bookings)
+    ? bookings.filter(b => b.status === 'pending').reduce((acc, b) => acc + Number(b.total_amount || 0), 0)
+    : 0;
+
+  const paidOut = Array.isArray(bookings)
+    ? bookings.filter(b => b.status === 'completed').reduce((acc, b) => acc + Number(b.total_amount || 0), 0)
+    : 0;
+
+  const availableAmount = Array.isArray(bookings)
+    ? bookings.filter(b => b.status === 'confirmed').reduce((acc, b) => acc + Number(b.total_amount || 0), 0)
+    : 0;
 
   return (
     <PageShell title="Earnings" subtitle="Revenue and payout summary">
@@ -72,9 +79,9 @@ export default function Earnings() {
 
       {/* ── Metric cards ── */}
       <div className="grid gap-4 sm:grid-cols-3 mb-8">
-        <MetricCard label="Available"  value={fmt(totalRevenue)}  icon={CheckCircle}     color="#3E7A58" bg="#EAF3EE" loading={loading} />
-        <MetricCard label="Pending"    value={fmt(pendingAmount)} icon={Clock}           color="#C8883A" bg="#FDF3E7" loading={loading} />
-        <MetricCard label="Paid out"   value={fmt(paidOut)}       icon={ArrowDownCircle} color="#1C3D2E" bg="#DFF0E7" loading={loading} />
+        <MetricCard label="Available"  value={fmt(availableAmount)} icon={CheckCircle}     color="#3E7A58" bg="#EAF3EE" loading={loading} />
+        <MetricCard label="Pending"    value={fmt(pendingAmount)}   icon={Clock}           color="#C8883A" bg="#FDF3E7" loading={loading} />
+        <MetricCard label="Paid out"   value={fmt(paidOut)}         icon={ArrowDownCircle} color="#1C3D2E" bg="#DFF0E7" loading={loading} />
       </div>
 
       {/* ── Earnings ledger ── */}

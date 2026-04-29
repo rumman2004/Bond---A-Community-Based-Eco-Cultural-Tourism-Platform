@@ -91,16 +91,17 @@ export default function AdminNav() {
             textDecoration: "none",
           }}
         >
-          {/* Icon */}
-          <span style={{
-            width: "34px", height: "34px", borderRadius: "10px",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "linear-gradient(135deg, #2d4a2d 0%, #4a6741 100%)",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-            flexShrink: 0,
-          }}>
-            <Map size={15} color="white" strokeWidth={1.8} />
-          </span>
+          {/* Logo image */}
+          <img
+            src="/logo.png"
+            alt="Bond Logo"
+            style={{
+              width: "36px", height: "36px",
+              objectFit: "contain",
+              flexShrink: 0,
+              transition: "transform 0.2s",
+            }}
+          />
           {/* Wordmark */}
           <span style={{
             fontSize: "18px", fontWeight: "700", color: "#fff",

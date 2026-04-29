@@ -5,6 +5,7 @@ const securityService = {
   getStats: () => api.get("/security/stats"),
 
   // Communities
+  getAllCommunities: () => api.get("/security/communities"),
   getPendingCommunities: () => api.get("/security/communities/pending"),
   getCommunityById: (id) => api.get(`/security/communities/${id}`),
   verifyCommunity: (id, note) => api.patch(`/security/communities/${id}/verify`, { note }),
@@ -14,6 +15,7 @@ const securityService = {
   // Complaints / Reports
   getReports: () => api.get("/reports"),
   updateReportStatus: (id, status) => api.patch(`/reports/${id}/status`, { status }),
+  submitReport: (data) => api.post("/reports", data),
 
   // Users
   getSuspendedUsers: () => api.get("/security/users/suspended"),

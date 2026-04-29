@@ -91,8 +91,8 @@ const h1  = (text) => `<h1 style="margin:0 0 8px;font-size:22px;font-weight:700;
 const p   = (text) => `<p style="margin:12px 0;font-size:15px;color:#3D5448;line-height:1.6;">${text}</p>`;
 const hr  = () => `<hr style="border:none;border-top:1px solid rgba(28,61,46,0.1);margin:24px 0;"/>`;
 const row = (label, value) =>
-  `<tr><td style="padding:4px 0;font-size:14px;color:#3D5448;"><strong>${label}</strong></td>
-       <td style="padding:4px 0;font-size:14px;color:#3D5448;">${value}</td></tr>`;
+  `<tr><td style="padding:6px 0;font-size:14px;color:#7A9285;width:120px;vertical-align:top;">${label}</td>
+       <td style="padding:6px 0;font-size:14px;color:#1A2820;font-weight:600;vertical-align:top;">${value}</td></tr>`;
 
 // ── Transactional emails ──────────────────────────────────────
 
@@ -143,12 +143,11 @@ export const sendBookingConfirmationEmail = ({ to, name, booking }) =>
       ${h1('Your booking is confirmed!')}
       ${p(`Hi ${name}, your booking for <strong>${booking.experienceTitle}</strong> is confirmed.`)}
       <table width="100%" cellpadding="0" cellspacing="0"
-        style="background:#F2EDE4;border-radius:10px;padding:20px;margin:16px 0;">
+        style="background:#FAF7F2;border-radius:10px;padding:20px;margin:16px 0;border:1px solid rgba(28,61,46,0.05);">
         ${row('Experience', booking.experienceTitle)}
         ${row('Date', booking.date)}
         ${row('Guests', booking.guests)}
-        ${row('Total Paid', `₹${booking.totalAmount}`)}
-        ${row('Booking ID', `#${booking.id}`)}
+        ${row('Total Amount', `₹${booking.totalAmount}`)}
       </table>
       ${hr()}
       ${btn(`${env.CLIENT_URL}/tourist/bookings`, 'View My Bookings')}
@@ -163,11 +162,12 @@ export const sendNewBookingAlertEmail = ({ to, hostName, booking }) =>
       ${h1('You have a new booking!')}
       ${p(`Hi ${hostName}, <strong>${booking.touristName}</strong> just booked <strong>${booking.experienceTitle}</strong>.`)}
       <table width="100%" cellpadding="0" cellspacing="0"
-        style="background:#F2EDE4;border-radius:10px;padding:20px;margin:16px 0;">
+        style="background:#FAF7F2;border-radius:10px;padding:20px;margin:16px 0;border:1px solid rgba(28,61,46,0.05);">
         ${row('Guest', booking.touristName)}
+        ${row('Experience', booking.experienceTitle)}
         ${row('Date', booking.date)}
         ${row('Guests', booking.guests)}
-        ${row('Amount', `₹${booking.totalAmount}`)}
+        ${row('Total Amount', `₹${booking.totalAmount}`)}
       </table>
       ${hr()}
       ${btn(`${env.CLIENT_URL}/community/bookings`, 'Manage Bookings')}
@@ -220,3 +220,97 @@ export const sendNotificationEmail = ({ to, name, subject, message, ctaUrl, ctaT
       ${ctaUrl ? `${hr()}${btn(ctaUrl, ctaText || 'View on Bond')}` : ''}
     `),
   });
+
+// ── Report Notifications ──────────────────────────────────────
+
+export const sendReportSubmissionTourist = ({ to, name, reportId, communityName }) =>
+  sendMail({
+    to,
+    subject: `Report Submitted — Case #${reportId.slice(0,8)}`,
+    html: layout(`
+      ${h1('Report Received')}
+      ${p(`Hi ${name}, we have received your report regarding <strong>${communityName}</strong>.`)}
+      ${p('Our security team will review the details and take appropriate action. You will be notified of any status changes.')}
+      ${hr()}
+      <p style="font-size:12px;color:#7A9285;">Report ID: ${reportId}</p>
+    `),
+  });
+
+export const sendReportSubmissionCommunity = ({ to, ownerName, communityName, reason }) =>
+  sendMail({
+    to,
+    subject: `Important: A report has been filed against ${communityName}`,
+    html: layout(`
+      ${h1('Security Notice')}
+      ${p(`Hi ${ownerName}, a report has been filed against <strong>${communityName}</strong> for <strong>${reason}</strong>.`)}
+      ${p('Our team is currently reviewing the matter. Please ensure your community continues to follow our safety guidelines.')}
+      ${hr()}
+      ${btn(`${env.CLIENT_URL}/community/profile`, 'Review Guidelines')}
+    `),
+  });
+
+export const sendReportStatusUpdateEmail = ({ to, name, communityName, status, reportId }) => {
+  const statusMap = {
+    'under_review': { title: 'Review in Progress', msg: 'Our security team has started investigating your report.' },
+    'resolved':     { title: 'Report Resolved',   msg: 'The investigation for your report is now complete and action has been taken.' },
+    'dismissed':    { title: 'Case Closed',       msg: 'Your report has been reviewed and closed.' }
+  };
+  const cfg = statusMap[status] || { title: 'Report Update', msg: `The status of your report has been updated to ${status}.` };
+
+  return sendMail({
+    to,
+    subject: `${cfg.title} — ${communityName}`,
+    html: layout(`
+      ${h1(cfg.title)}
+      ${p(`Hi ${name}, there is an update regarding your report against <strong>${communityName}</strong>.`)}
+      ${p(cfg.msg)}
+      ${hr()}
+      <p style="font-size:12px;color:#7A9285;">Case ID: ${reportId.slice(0,8)}</p>
+    `),
+  });
+};
+
+export const sendReportDismissalCommunityEmail = ({ to, ownerName, communityName }) =>
+  sendMail({
+    to,
+    subject: `Report update for ${communityName}`,
+    html: layout(`
+      ${h1('Case Closed')}
+      ${p(`Hi ${ownerName}, the recent report filed against <strong>${communityName}</strong> has been dismissed after review.`)}
+      ${p('No further action is required from your side at this time.')}
+      ${hr()}
+      <p style="font-size:12px;color:#7A9285;">Thank you for being part of Bond.</p>
+    `),
+  });
+
+/**
+ * Warn community owner about a flagged experience
+ */
+export const sendExperienceFlagWarningEmail = async (email, data) => {
+  const { ownerName, communityName, experienceTitle, reason } = data;
+  
+  const html = `
+    <div style="font-family: 'Inter', sans-serif; color: #1F2937; max-width: 600px; margin: 0 auto; padding: 40px; background: #FFFAFA; border: 1px solid #FEE2E2; border-radius: 24px;">
+      <h2 style="color: #991B1B; margin-top: 0;">Experience Safety Warning ⚠️</h2>
+      <p>Hello <strong>${ownerName}</strong>,</p>
+      <p>Your experience <strong>"${experienceTitle}"</strong> in the community <strong>${communityName}</strong> has been flagged by our security team for review.</p>
+      
+      <div style="background: #FFF; padding: 20px; border-radius: 16px; border-left: 4px solid #991B1B; margin: 20px 0; border-top: 1px solid #F3F4F6; border-right: 1px solid #F3F4F6; border-bottom: 1px solid #F3F4F6;">
+        <p style="margin: 0; font-size: 14px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">Reason for Warning</p>
+        <p style="margin: 10px 0 0 0; font-size: 16px; line-height: 1.6;">${reason}</p>
+      </div>
+
+      <p><strong>Impact:</strong> This experience has been temporarily paused and hidden from the platform while we investigate. Please review the safety guidelines and address the issue promptly.</p>
+      
+      <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #FEE2E2; font-size: 14px; color: #6B7280;">
+        If you have questions, please reply to this email or visit your community dashboard.
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `⚠️ Security Warning: Experience Flagged - ${experienceTitle}`,
+    html,
+  });
+};

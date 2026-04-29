@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { CheckCircle, XCircle, Clock, AlertCircle, Users, Calendar, IndianRupee, Search, Filter } from "lucide-react";
+import { CheckCircle, XCircle, Clock, AlertCircle, Users, Calendar, IndianRupee, Search, Filter, FileText } from "lucide-react";
 import PageShell from "../PageShell";
 import bookingService from "../../services/bookingService";
 
@@ -61,13 +61,23 @@ function BookingRow({ booking, onAction }) {
           <StatusBadge status={booking.status} />
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#9A9285]">
-          <span className="flex items-center gap-1"><Calendar size={11} />{fmtDate(booking.date)}</span>
-          {booking.guests && <span className="flex items-center gap-1"><Users size={11} />{booking.guests} guest{booking.guests > 1 ? "s" : ""}</span>}
+          <span className="flex items-center gap-1"><Calendar size={11} />{fmtDate(booking.booking_date || booking.date)}</span>
+          {(booking.num_guests || booking.guests) && <span className="flex items-center gap-1"><Users size={11} />{booking.num_guests || booking.guests} guest{(booking.num_guests || booking.guests) > 1 ? "s" : ""}</span>}
           {booking.total_amount && <span className="flex items-center gap-1"><IndianRupee size={11} />{fmt(booking.total_amount)}</span>}
           {booking.tourist_name && <span>{booking.tourist_name}</span>}
         </div>
         {booking.notes && (
           <p className="text-xs text-[#9A9285] italic mt-1">"{booking.notes}"</p>
+        )}
+
+        {/* ID Proof Visibility for Community */}
+        {booking.id_document_url && (
+          <div className="mt-2 text-xs border-t border-[#F0EBE3] pt-2 flex items-center gap-1.5 text-[#3E7A58]">
+            <FileText size={12} />
+            <a href={booking.id_document_url} target="_blank" rel="noopener noreferrer" className="font-medium underline hover:text-[#1C3D2E] transition-colors">
+              View Tourist ID Proof
+            </a>
+          </div>
         )}
       </div>
 

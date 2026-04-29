@@ -14,7 +14,7 @@ import StoryView from "../components/common/StoryView";
 
 export default function TouristRoutes() {
   return (
-    <Route path="/tourist" element={<ProtectedRoute><TouristLayout /></ProtectedRoute>}>
+    <Route path="/tourist" element={<ProtectedRoute role="tourist"><TouristLayout /></ProtectedRoute>}>
       <Route index element={<TouristDashboard />} />
       <Route path="profile" element={<TouristProfile />} />
       <Route path="bookings" element={<MyBookings />} />

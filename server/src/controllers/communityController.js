@@ -63,9 +63,9 @@ export const getCommunities = asyncHandler(async (req, res) => {
 
   // community_score doesn't exist as a column — approximate it via avg_rating + bookings weight
   const allowedSorts = {
-    community_score: '(c.avg_rating * 0.6 + LEAST(c.total_bookings, 100) * 0.4)',
-    rating:          'c.avg_rating',
-    bookings:        'c.total_bookings',
+    community_score: '(COALESCE(c.avg_rating, 0) * 0.6 + LEAST(COALESCE(c.total_bookings, 0), 100) * 0.4)',
+    rating:          'COALESCE(c.avg_rating, 0)',
+    bookings:        'COALESCE(c.total_bookings, 0)',
   };
   const orderBy = allowedSorts[sort] || allowedSorts.community_score;
 
@@ -79,7 +79,9 @@ export const getCommunities = asyncHandler(async (req, res) => {
 
   // Direct query — replaces missing top_communities view
   const result = await query(
-    `SELECT c.*
+    `SELECT c.*,
+            (SELECT COUNT(*) FROM community_members cm WHERE cm.community_id = c.id) as member_count,
+            (SELECT COUNT(*) FROM reviews r WHERE r.community_id = c.id) as review_count
      FROM communities c
      WHERE ${where}
      ORDER BY ${orderBy} DESC
@@ -107,7 +109,9 @@ export const getCommunityBySlug = asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT c.*,
             u.full_name  AS owner_name,
-            u.avatar_url AS owner_avatar
+            u.avatar_url AS owner_avatar,
+            (SELECT COUNT(*) FROM community_members cm WHERE cm.community_id = c.id) as member_count,
+            (SELECT COUNT(*) FROM reviews r WHERE r.community_id = c.id) as review_count
      FROM communities c
      JOIN users u ON u.id = c.user_id
      WHERE c.slug = $1 AND c.status = 'verified'`,
@@ -117,18 +121,15 @@ export const getCommunityBySlug = asyncHandler(async (req, res) => {
   const community = result.rows[0];
   if (!community) throw new ApiError(404, 'Community not found');
 
-  const tagsResult = await query(
-    `SELECT st.id, st.slug, st.label, st.icon
-     FROM community_sustainability_tags cst
-     JOIN sustainability_tags st ON st.id = cst.tag_id
-     WHERE cst.community_id = $1`,
-    [community.id]
-  );
-
-  community.tags = tagsResult.rows;
-
-  // Also fetch members + offerings (public-safe data for community profile)
-  const [membersResult, offeringsResult] = await Promise.all([
+  // 2. Fetch everything else in parallel for better performance
+  const [tagsResult, membersResult, offeringsResult, imagesResult] = await Promise.all([
+    query(
+      `SELECT st.id, st.slug, st.label, st.icon
+       FROM community_sustainability_tags cst
+       JOIN sustainability_tags st ON st.id = cst.tag_id
+       WHERE cst.community_id = $1`,
+      [community.id]
+    ),
     query(
       `SELECT id, full_name, phone, role, is_owner
        FROM community_members WHERE community_id = $1
@@ -141,28 +142,36 @@ export const getCommunityBySlug = asyncHandler(async (req, res) => {
        ORDER BY sort_order ASC`,
       [community.id]
     ).catch(() => ({ rows: [] })),
+    query(
+      `SELECT id, community_id, image_url, image_public_id, caption, sort_order, is_primary, created_at
+       FROM community_images
+       WHERE community_id = $1
+       ORDER BY is_primary DESC, sort_order ASC, created_at ASC`,
+      [community.id]
+    ).catch(() => ({ rows: [] }))
   ]);
 
+  community.tags = tagsResult.rows;
   community.members = membersResult.rows;
+  community.images = imagesResult.rows;
 
-  // Attach images to each offering
+  // 3. Attach images to offerings
   const offerings = offeringsResult.rows;
   if (offerings.length > 0) {
     const offeringIds = offerings.map((o) => o.id);
-    const imagesResult = await query(
+    const offeringImagesResult = await query(
       'SELECT * FROM community_offering_images WHERE offering_id = ANY($1) ORDER BY sort_order ASC',
       [offeringIds]
     ).catch(() => ({ rows: [] }));
+    
     const imagesByOffering = {};
-    imagesResult.rows.forEach((img) => {
+    offeringImagesResult.rows.forEach((img) => {
       if (!imagesByOffering[img.offering_id]) imagesByOffering[img.offering_id] = [];
       imagesByOffering[img.offering_id].push(img);
     });
     offerings.forEach((o) => { o.images = imagesByOffering[o.id] || []; });
   }
   community.offerings = offerings;
-
-  await attachCommunityImages([community]);
 
   res.json(new ApiResponse(200, { community }));
 });
@@ -413,41 +422,41 @@ export const getCommunityStats = asyncHandler(async (req, res) => {
 
   const { id: communityId, slug, name, status } = communityResult.rows[0];
 
-  const [statsResult, bookingsResult] = await Promise.all([
-    // Inline query replacing the missing booking_summary_current_month view
+  const [statsResult, experienceCount, ratingResult] = await Promise.all([
+    // All-time booking stats
     query(
       `SELECT
          COUNT(*)                                            AS total_bookings,
-         COALESCE(SUM(total_amount), 0)                     AS total_revenue,
-         COALESCE(SUM(num_guests), 0)                       AS total_guests,
+         COALESCE(SUM(total_amount) FILTER (WHERE status IN ('confirmed', 'completed')), 0) AS total_revenue,
          COUNT(*) FILTER (WHERE status = 'confirmed')       AS confirmed_bookings,
          COUNT(*) FILTER (WHERE status = 'pending')         AS pending_bookings,
-         COUNT(*) FILTER (WHERE status = 'cancelled')       AS cancelled_bookings
+         COUNT(*) FILTER (WHERE status = 'completed')       AS completed_bookings
        FROM bookings
-       WHERE community_id = $1
-         AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())`,
+       WHERE community_id = $1`,
       [communityId]
     ),
+    // Total experiences count
     query(
-      `SELECT b.id, b.booking_date, b.num_guests, b.total_amount, b.status,
-              u.full_name      AS tourist_name,
-              u.avatar_url     AS tourist_avatar,
-              e.title          AS experience_title
-       FROM bookings b
-       JOIN users u ON u.id = b.tourist_id
-       JOIN experiences e ON e.id = b.experience_id
-       WHERE b.community_id = $1
-       ORDER BY b.created_at DESC LIMIT 5`,
+      'SELECT COUNT(*) FROM experiences WHERE community_id = $1',
       [communityId]
     ),
+    // Rating stats
+    query(
+      `SELECT
+         COALESCE(avg_rating, 0) AS avg_rating,
+         COALESCE(total_reviews, 0) AS total_reviews
+       FROM communities
+       WHERE id = $1`,
+      [communityId]
+    )
   ]);
 
-  res.json(new ApiResponse(200, {
-    id:             communityId,
-    slug,
-    name,
-    status,
-    stats:          statsResult.rows[0] || {},
-    recentBookings: bookingsResult.rows,
-  }));
+  const stats = {
+    ...(statsResult.rows[0] || {}),
+    total_experiences: parseInt(experienceCount.rows[0].count),
+    avg_rating: ratingResult.rows[0]?.avg_rating || 0,
+    total_reviews: ratingResult.rows[0]?.total_reviews || 0
+  };
+
+  res.json(new ApiResponse(200, stats));
 });

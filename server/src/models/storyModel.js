@@ -92,30 +92,31 @@ export const findStoriesByCommunityId = (community_id) =>
 
 // ─── Create & update ─────────────────────────────────────────
 
-export const createStory = ({ community_id, author_id, title, slug, body, excerpt, tags, category }) =>
+export const createStory = ({ community_id, author_id, title, slug, body, excerpt, tags, category, cover_url, cover_image_url }) =>
   query(
-    `INSERT INTO stories (community_id, author_id, title, slug, body, excerpt, tags, category)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO stories (community_id, author_id, title, slug, body, excerpt, tags, category, status, published_at, cover_image_url)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'published', NOW(), $9)
      RETURNING *`,
-    [community_id, author_id, title, slug, body, excerpt, tags, category]
+    [community_id, author_id, title, slug, body, excerpt, tags, category, cover_url || cover_image_url]
   );
 
-export const updateStory = (id, { title, body, excerpt, tags, category, status }) =>
+export const updateStory = (id, { title, body, excerpt, tags, category, status, cover_url, cover_image_url }) =>
   query(
     `UPDATE stories SET
-       title       = COALESCE($1, title),
-       body        = COALESCE($2, body),
-       excerpt     = COALESCE($3, excerpt),
-       tags        = COALESCE($4, tags),
-       category    = COALESCE($5, category),
-       status      = COALESCE($6, status),
-       published_at = CASE
-                        WHEN $6 = 'published' AND published_at IS NULL THEN NOW()
-                        ELSE published_at
-                      END
-     WHERE id = $7
+       title            = COALESCE($1, title),
+       body             = COALESCE($2, body),
+       excerpt          = COALESCE($3, excerpt),
+       tags             = COALESCE($4, tags),
+       category         = COALESCE($5, category),
+       status           = COALESCE($6, status),
+       published_at     = CASE
+                            WHEN $6 = 'published' AND published_at IS NULL THEN NOW()
+                            ELSE published_at
+                          END,
+       cover_image_url  = COALESCE($7, cover_image_url)
+     WHERE id = $8
      RETURNING *`,
-    [title, body, excerpt, tags, category, status, id]
+    [title, body, excerpt, tags, category, status, cover_url || cover_image_url, id]
   );
 
 export const updateStoryCoverImage = (id, cover_image_url) =>

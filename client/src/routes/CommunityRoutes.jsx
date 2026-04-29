@@ -17,11 +17,11 @@ export default function CommunityRoutes() {
       {/* ── Registration wizard — full-page, no sidebar ── */}
       <Route
         path="/community/register"
-        element={<ProtectedRoute><CommunityRegistration /></ProtectedRoute>}
+        element={<ProtectedRoute role="community"><CommunityRegistration /></ProtectedRoute>}
       />
 
       {/* ── All other community pages with the sidebar layout ── */}
-      <Route path="/community" element={<ProtectedRoute><CommunityLayout /></ProtectedRoute>}>
+      <Route path="/community" element={<ProtectedRoute role="community"><CommunityLayout /></ProtectedRoute>}>
         <Route index element={<CommunityDashboard />} />
         <Route path="profile" element={<CommunityProfileSetup />} />
         <Route path="experiences" element={<ManageExperiences />} />

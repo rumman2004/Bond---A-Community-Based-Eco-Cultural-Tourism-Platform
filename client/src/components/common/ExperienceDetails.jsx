@@ -8,6 +8,7 @@ import {
 import experienceService from "../../services/experienceService";
 import reviewService from "../../services/reviewService";
 import userService from "../../services/userService";
+import { useAuth } from "../../context/AuthContext";
 
 /* ── Review card ── */
 function ReviewCard({ review }) {
@@ -63,6 +64,7 @@ export default function ExperienceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, user } = useAuth();
 
   const [exp, setExp]           = useState(null);
   const [reviews, setReviews]   = useState([]);
@@ -74,6 +76,8 @@ export default function ExperienceDetails() {
   const [date, setDate]           = useState("");
   const [saved, setSaved]         = useState(false);
   const [savingFav, setSavingFav] = useState(false);
+
+  const isCommunityView = location.pathname.startsWith('/community');
 
   const heroRef    = useRef(null);
   const contentRef = useRef(null);
@@ -106,17 +110,18 @@ export default function ExperienceDetails() {
           community: raw.community_name || "Community",
           communityId: raw.community_slug || raw.community_id,
           location: [raw.village, raw.state].filter(Boolean).join(", ") || "Northeast India",
-          rating: parseFloat(raw.avg_rating) || 4.5,
-          reviews: raw.review_count || 0,
+          rating: raw.avg_rating ? parseFloat(raw.avg_rating).toFixed(1) : "0.0",
+          reviews: parseInt(raw.total_reviews) || 0,
           price: parseFloat(raw.price_per_person) || 0,
-          duration: raw.duration_days ? `${raw.duration_days} day${raw.duration_days > 1 ? "s" : ""}` : "1 day",
-          groupSize: `${raw.min_participants || 1}–${raw.max_participants || 10} people`,
+          duration: raw.duration_days ? `${raw.duration_days} day${raw.duration_days > 1 ? "s" : ""}` : (raw.duration_hours ? `${raw.duration_hours} hour${raw.duration_hours > 1 ? "s" : ""}` : "N/A"),
+          groupSize: raw.min_group_size || raw.max_group_size ? `${raw.min_group_size || 1}–${raw.max_group_size} people` : "Flexible",
           category: raw.category || "Cultural",
           images,
+          ecoCertified: !!raw.eco_certified,
           about: raw.description || "An immersive cultural experience.",
-          highlights: raw.highlights || ["Cultural immersion", "Guided by locals", "Traditional cuisine"],
-          includes: raw.included_items || ["Local guide", "Meals", "Accommodation"],
-          excludes: raw.excluded_items || ["Transport to site", "Personal expenses"],
+          highlights: Array.isArray(raw.highlights) ? raw.highlights : [],
+          includes: Array.isArray(raw.includes) ? raw.includes : (Array.isArray(raw.included_items) ? raw.included_items : []),
+          excludes: Array.isArray(raw.excludes) ? raw.excludes : (Array.isArray(raw.excluded_items) ? raw.excluded_items : []),
         });
 
         // Fetch reviews
@@ -204,13 +209,13 @@ export default function ExperienceDetails() {
     <div style={{ background: "var(--color-cream)", minHeight: "100vh" }}>
 
       {/* ── BACK NAV ── */}
-      <div className="pt-24 pb-4 px-5 max-w-6xl mx-auto">
+      <div className={`${isCommunityView ? "pt-4" : "pt-24"} pb-4 px-5 max-w-6xl mx-auto`}>
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-sm transition-all duration-200 hover:-translate-x-1"
           style={{ color: "var(--color-text-muted)" }}
         >
-          <ChevronLeft size={16} /> Back to Explore
+          <ChevronLeft size={16} /> {isCommunityView ? "Back to Experiences" : "Back to Explore"}
         </button>
       </div>
 
@@ -276,7 +281,7 @@ export default function ExperienceDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
           {/* ── LEFT ── */}
-          <div ref={contentRef} className="lg:col-span-2 flex flex-col gap-8">
+          <div ref={contentRef} className={`${isCommunityView ? "lg:col-span-3" : "lg:col-span-2"} flex flex-col gap-8`}>
 
             {/* Title block */}
             <div className="flex flex-col gap-3">
@@ -287,12 +292,14 @@ export default function ExperienceDetails() {
                 >
                   {exp.category}
                 </span>
-                <span
-                  className="flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full"
-                  style={{ background: "var(--color-forest-pale)", color: "var(--color-forest)" }}
-                >
-                  <Leaf size={11} /> Eco-certified
-                </span>
+                {exp.ecoCertified && (
+                  <span
+                    className="flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full"
+                    style={{ background: "var(--color-forest-pale)", color: "var(--color-forest)" }}
+                  >
+                    <Leaf size={11} /> Eco-certified
+                  </span>
+                )}
                 <span
                   className="flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full"
                   style={{ background: "#e8f4fd", color: "#2196f3" }}
@@ -373,60 +380,64 @@ export default function ExperienceDetails() {
             </div>
 
             {/* Highlights */}
-            <div className="flex flex-col gap-3">
-              <h2
-                className="text-xl"
-                style={{ fontFamily: "var(--font-display)", color: "var(--color-text-dark)" }}
-              >
-                Highlights
-              </h2>
-              <ul className="flex flex-col gap-2.5">
-                {exp.highlights.map((h) => (
-                  <li key={h} className="flex items-start gap-3 text-sm" style={{ color: "var(--color-text-mid)" }}>
-                    <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" style={{ color: "var(--color-forest)" }} />
-                    {h}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {exp.highlights && exp.highlights.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <h2
+                  className="text-xl"
+                  style={{ fontFamily: "var(--font-display)", color: "var(--color-text-dark)" }}
+                >
+                  Highlights
+                </h2>
+                <ul className="flex flex-col gap-2.5">
+                  {exp.highlights.map((h) => (
+                    <li key={h} className="flex items-start gap-3 text-sm" style={{ color: "var(--color-text-mid)" }}>
+                      <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" style={{ color: "var(--color-forest)" }} />
+                      {h}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Includes / Excludes */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {[
-                { title: "What's included", items: exp.includes, positive: true },
-                { title: "Not included",    items: exp.excludes, positive: false },
-              ].map(({ title, items, positive }) => (
-                <div
-                  key={title}
-                  className="p-5 rounded-2xl flex flex-col gap-3"
-                  style={{
-                    background: positive ? "var(--color-forest-pale)" : "var(--color-cream-mid)",
-                    border: "1px solid var(--color-border-soft)",
-                  }}
-                >
-                  <h3
-                    className="text-sm font-semibold"
-                    style={{ color: positive ? "var(--color-forest)" : "var(--color-text-muted)" }}
+            {((exp.includes && exp.includes.length > 0) || (exp.excludes && exp.excludes.length > 0)) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {[
+                  { title: "What's included", items: exp.includes, positive: true },
+                  { title: "Not included",    items: exp.excludes, positive: false },
+                ].filter(({ items }) => items && items.length > 0).map(({ title, items, positive }) => (
+                  <div
+                    key={title}
+                    className="p-5 rounded-2xl flex flex-col gap-3"
+                    style={{
+                      background: positive ? "var(--color-forest-pale)" : "var(--color-cream-mid)",
+                      border: "1px solid var(--color-border-soft)",
+                    }}
                   >
-                    {title}
-                  </h3>
-                  <ul className="flex flex-col gap-2">
-                    {items.map((item) => (
-                      <li
-                        key={item}
-                        className="flex items-start gap-2 text-sm"
-                        style={{ color: "var(--color-text-mid)" }}
-                      >
-                        <span style={{ color: positive ? "var(--color-forest)" : "var(--color-text-muted)" }}>
-                          {positive ? "✓" : "✗"}
-                        </span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
+                    <h3
+                      className="text-sm font-semibold"
+                      style={{ color: positive ? "var(--color-forest)" : "var(--color-text-muted)" }}
+                    >
+                      {title}
+                    </h3>
+                    <ul className="flex flex-col gap-2">
+                      {items.map((item) => (
+                        <li
+                          key={item}
+                          className="flex items-start gap-2 text-sm"
+                          style={{ color: "var(--color-text-mid)" }}
+                        >
+                          <span style={{ color: positive ? "var(--color-forest)" : "var(--color-text-muted)" }}>
+                            {positive ? "✓" : "✗"}
+                          </span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Reviews */}
             <div className="flex flex-col gap-4">
@@ -461,7 +472,8 @@ export default function ExperienceDetails() {
           </div>
 
           {/* ── RIGHT — booking panel ── */}
-          <div className="lg:col-span-1">
+          {!isCommunityView && (
+            <div className="lg:col-span-1">
             <div
               ref={bookingRef}
               className="sticky top-24 rounded-3xl p-6 flex flex-col gap-5"
@@ -554,7 +566,13 @@ export default function ExperienceDetails() {
 
               {/* Book CTA */}
               <button
-                onClick={() => navigate(`/booking/${exp.id}`, { state: { date, guests, experienceId: exp.id } })}
+                onClick={() => {
+                  if (isAuthenticated) {
+                    navigate(`/booking/${exp.id}`, { state: { date, guests, experienceId: exp.id } });
+                  } else {
+                    navigate('/auth/login', { state: { from: window.location.pathname } });
+                  }
+                }}
                 disabled={!date}
                 className="w-full py-3.5 rounded-full font-semibold text-sm transition-all duration-200 hover:brightness-110 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: "var(--color-forest-deep)", color: "white" }}
@@ -569,9 +587,9 @@ export default function ExperienceDetails() {
               {/* Trust */}
               <div className="flex items-center justify-center gap-5 pt-1 flex-wrap">
                 {[
-                  { icon: Shield, text: "Verified community" },
-                  { icon: Leaf, text: "Eco-certified" },
-                ].map(({ icon: Icon, text }) => (
+                  { icon: Shield, text: "Verified community", show: true },
+                  { icon: Leaf, text: "Eco-certified", show: exp.ecoCertified },
+                ].filter(t => t.show).map(({ icon: Icon, text }) => (
                   <div key={text} className="flex items-center gap-1.5 text-xs" style={{ color: "var(--color-forest-muted)" }}>
                     <Icon size={13} />
                     <span>{text}</span>
@@ -580,6 +598,7 @@ export default function ExperienceDetails() {
               </div>
             </div>
           </div>
+          )}
 
         </div>
       </div>

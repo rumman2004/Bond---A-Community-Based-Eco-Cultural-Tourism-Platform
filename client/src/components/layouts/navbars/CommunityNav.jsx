@@ -103,12 +103,11 @@ export default function CommunityNav({ onMenuToggle }) {
         </button>
 
         <Link to="/community" className="flex items-center gap-2.5 group">
-          <span
-            className="w-8 h-8 rounded-[9px] flex items-center justify-center group-hover:scale-105 transition-transform"
-            style={{ backgroundColor: "var(--color-forest-deep)" }}
-          >
-            <Map size={15} color="white" strokeWidth={1.8} />
-          </span>
+          <img
+            src="/logo.png"
+            alt="Bond Logo"
+            className="h-9 w-9 object-contain transition-transform duration-200 group-hover:scale-105"
+          />
           <span
             className="text-lg font-semibold tracking-tight hidden sm:block"
             style={{

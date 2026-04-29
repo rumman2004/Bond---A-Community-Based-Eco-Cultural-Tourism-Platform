@@ -162,10 +162,30 @@ export const uploadVerificationDocument = async (buffer, communityId) => {
   const result = await uploadBuffer(buffer, FOLDERS.DOCUMENT, {
     public_id:      `doc_${communityId}_${Date.now()}`,
     resource_type:  "auto",
-    allowed_formats: ["jpg", "jpeg", "png", "pdf"],
+    allowed_formats: ["jpg", "jpeg", "png", "pdf", "avif", "webp"],
     max_bytes:      10 * 1024 * 1024,
   });
   return { url: result.secure_url, publicId: result.public_id };
+};
+
+/**
+ * Upload multiple verification documents.
+ *
+ * @param {Buffer[]} buffers
+ * @param {string}   communityId
+ * @returns {Promise<Array<{ url: string, publicId: string }>>}
+ */
+export const uploadVerificationDocuments = async (buffers, communityId) => {
+  const uploads = buffers.map((buffer, idx) =>
+    uploadBuffer(buffer, FOLDERS.DOCUMENT, {
+      public_id:      `doc_${communityId}_${idx}_${Date.now()}`,
+      resource_type:  "auto",
+      allowed_formats: ["jpg", "jpeg", "png", "pdf", "avif", "webp"],
+      max_bytes:      10 * 1024 * 1024,
+    })
+  );
+  const results = await Promise.all(uploads);
+  return results.map((r) => ({ url: r.secure_url, publicId: r.public_id }));
 };
 
 // ─── Utility ─────────────────────────────────────────────────────────────────

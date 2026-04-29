@@ -35,17 +35,27 @@ const attachExperienceImages = async (experiences) => {
 // ─── Get all active experiences (public, explore page) ───────
 export const getExperiences = asyncHandler(async (req, res) => {
   const {
-    community_id, category, difficulty, state,
+    community_id, community_slug, category, difficulty, state,
     min_price, max_price, tag, search,
     page = 1, limit = 12,
     sort = 'popularity_score',
+    mine,
   } = req.query;
 
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const params = [];
-  const filters = ["e.status = 'active'", "c.status = 'verified'"];
+  const filters = [];
+
+  if (mine === 'true' && req.user) {
+    params.push(req.user.id);
+    filters.push(`c.user_id = $${params.length}`);
+    // Allow all statuses for own dashboard
+  } else {
+    filters.push("e.status IN ('active', 'draft')");
+  }
 
   if (community_id) { params.push(community_id); filters.push(`e.community_id = $${params.length}`); }
+  if (community_slug) { params.push(community_slug); filters.push(`c.slug = $${params.length}`); }
   if (category)     { params.push(category);     filters.push(`e.category = $${params.length}`); }
   if (difficulty)   { params.push(difficulty);   filters.push(`e.difficulty = $${params.length}`); }
   if (state)        { params.push(state);        filters.push(`c.state = $${params.length}`); }
@@ -118,7 +128,7 @@ export const getExperienceBySlug = asyncHandler(async (req, res) => {
             c.logo_url AS community_logo
      FROM experiences e
      JOIN communities c ON c.id = e.community_id
-     WHERE e.slug = $1 AND e.status = 'active'`,
+     WHERE (e.slug = $1 OR e.id::text = $1) AND e.status IN ('active', 'draft')`,
     [slug]
   );
 
@@ -155,22 +165,30 @@ export const getExperienceBySlug = asyncHandler(async (req, res) => {
 // ─── Create experience (community owner) ─────────────────────
 export const createExperience = asyncHandler(async (req, res) => {
   const commResult = await query(
-    "SELECT id FROM communities WHERE user_id = $1 AND status = 'verified'",
+    "SELECT id FROM communities WHERE user_id = $1",
     [req.user.id]
   );
-  if (!commResult.rows[0]) throw new ApiError(403, 'Verified community required to create experiences');
+  if (!commResult.rows[0]) throw new ApiError(403, 'Community required to create experiences');
   const communityId = commResult.rows[0].id;
 
   const {
     title, slug, description, short_description,
     category, difficulty, duration_hours, duration_days,
     max_group_size, min_group_size,
-    price_per_person, currency,
+    price_per_person, price, currency,
     includes, excludes, meeting_point, languages_offered,
+    cover_url, cover_image_url
   } = req.body;
 
-  const slugCheck = await query('SELECT id FROM experiences WHERE slug = $1', [slug]);
-  if (slugCheck.rowCount > 0) throw new ApiError(409, 'Slug already taken');
+  const realPrice = price_per_person !== undefined ? price_per_person : price;
+  const imgUrl = cover_url || cover_image_url || null;
+  let realSlug = slug || title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+  if (!realSlug) realSlug = `exp-${Date.now()}`;
+
+  const slugCheck = await query('SELECT id FROM experiences WHERE slug = $1', [realSlug]);
+  if (slugCheck.rowCount > 0) {
+    realSlug = `${realSlug}-${Date.now()}`;
+  }
 
   const result = await query(
     `INSERT INTO experiences
@@ -178,15 +196,16 @@ export const createExperience = asyncHandler(async (req, res) => {
         category, difficulty, duration_hours, duration_days,
         max_group_size, min_group_size,
         price_per_person, currency,
-        includes, excludes, meeting_point, languages_offered)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+        includes, excludes, meeting_point, languages_offered, cover_image_url, status)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
      RETURNING *`,
     [
-      communityId, title, slug, description, short_description,
-      category, difficulty, duration_hours, duration_days,
-      max_group_size, min_group_size,
-      price_per_person, currency || 'INR',
-      includes, excludes, meeting_point, languages_offered,
+      communityId, title, realSlug, description, short_description || null,
+      category, difficulty || 'easy', duration_hours || null, duration_days || null,
+      max_group_size || 10, min_group_size || 1,
+      realPrice || 0, currency || 'INR',
+      includes || null, excludes || null, meeting_point || null, languages_offered || null,
+      imgUrl, 'active'
     ]
   );
 
@@ -209,11 +228,14 @@ export const updateExperience = asyncHandler(async (req, res) => {
     title, description, short_description, category, difficulty,
     duration_hours, duration_days,
     max_group_size, min_group_size,
-    price_per_person,
+    price_per_person, price,
     includes, excludes,
     meeting_point, languages_offered, status,
+    cover_url, cover_image_url
   } = req.body;
 
+  const realPrice = price_per_person !== undefined ? price_per_person : price;
+  const imgUrl = cover_url || cover_image_url;
   const allowedStatuses = ['draft', 'active', 'paused', 'archived'];
   if (status && !allowedStatuses.includes(status)) throw new ApiError(400, 'Invalid status');
 
@@ -233,15 +255,17 @@ export const updateExperience = asyncHandler(async (req, res) => {
        excludes          = COALESCE($12, excludes),
        meeting_point     = COALESCE($13, meeting_point),
        languages_offered = COALESCE($14, languages_offered),
-       status            = COALESCE($15, status)
-     WHERE id = $16
+       status            = COALESCE($15, status),
+       cover_image_url   = COALESCE($16, cover_image_url)
+     WHERE id = $17
      RETURNING *`,
     [
       title, description, short_description, category, difficulty,
       duration_hours, duration_days,
       max_group_size, min_group_size,
-      price_per_person, includes, excludes,
+      realPrice, includes, excludes,
       meeting_point, languages_offered, status,
+      imgUrl,
       id,
     ]
   );

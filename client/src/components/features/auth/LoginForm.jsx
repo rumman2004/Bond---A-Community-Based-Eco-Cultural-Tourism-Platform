@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AlertCircle, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { gsap } from "gsap";
 import { useAuth } from "../../../context/AuthContext";
@@ -14,6 +14,7 @@ const ROLE_REDIRECT = {
 
 export default function LoginForm() {
   const navigate    = useNavigate();
+  const location    = useLocation();
   const { login }   = useAuth();
   const formRef     = useRef(null);
 
@@ -45,7 +46,22 @@ export default function LoginForm() {
     setLoading(true);
     try {
       const { user } = await login(form);
-      navigate(ROLE_REDIRECT[user?.role] || "/tourist", { replace: true });
+      const from = location.state?.from;
+      let targetPath = from?.pathname || from || ROLE_REDIRECT[user?.role] || "/tourist";
+      
+      // Role-based path enforcement
+      if (user?.role === "tourist") {
+        const forbidden = ["/community", "/admin", "/security"];
+        if (forbidden.some(p => targetPath.startsWith(p))) targetPath = "/tourist";
+      } else if (user?.role === "community") {
+        if (targetPath.startsWith("/tourist") || targetPath === "/") targetPath = "/community";
+      } else if (user?.role === "security") {
+        if (!targetPath.startsWith("/security")) targetPath = "/security";
+      } else if (user?.role === "admin") {
+        if (!targetPath.startsWith("/admin")) targetPath = "/admin";
+      }
+
+      navigate(targetPath, { replace: true });
     } catch (err) {
       setError(err.message || "Invalid email or password.");
       shakeForm();

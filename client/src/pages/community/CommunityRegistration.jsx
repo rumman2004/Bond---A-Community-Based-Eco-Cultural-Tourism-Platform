@@ -93,7 +93,7 @@ export default function CommunityRegistration() {
 
   // Step 2 state
   const [members,   setMembers]   = useState([{ full_name: "", phone: "", role: "", is_owner: true }]);
-  const [docFile,   setDocFile]   = useState(null);
+  const [docFiles,  setDocFiles]  = useState([]);
   const [savedDocs, setSavedDocs] = useState([]);
 
   // Step 3 state
@@ -188,7 +188,7 @@ export default function CommunityRegistration() {
     if (step === 2) {
       const hasInvalid = members.some((m) => !m.full_name.trim() || !m.phone.trim());
       if (hasInvalid) errs.members = "All members must have a name and phone number";
-      if (!docFile && savedDocs.length === 0) errs.doc = "Please upload the ID bundle PDF";
+      if (docFiles.length === 0 && savedDocs.length === 0) errs.doc = "Please upload at least one ID document";
     }
     if (step === 3) {
       if (offerings.length === 0) errs.offerings = "Please add at least one offering";
@@ -203,28 +203,24 @@ export default function CommunityRegistration() {
   };
 
   // ── Required ID document uploader ───────────────────────────
-  const uploadDocumentNow = async (currentCommId, file) => {
+  const uploadDocumentsNow = async (currentCommId, files) => {
     if (!currentCommId) throw new Error("Community profile is not ready yet. Please save Step 1 again.");
-    if (!file) return null;
+    if (!files || files.length === 0) return null;
 
     setUploading(true);
-    setUploadMsg("Uploading ID document...");
+    setUploadMsg(`Uploading ${files.length} document(s)...`);
 
     try {
       const fd = new FormData();
-      fd.append("document", file);
+      files.forEach((f) => fd.append("document", f));
       fd.append("doc_type", "id_bundle");
 
       const res = await communityService.uploadDocument(currentCommId, fd);
-      const newDoc = res?.data?.document;
+      const newDocs = res?.data?.documents || [];
 
-      if (!newDoc?.file_url) {
-        throw new Error("Document uploaded but no document URL was returned by the server.");
-      }
-
-      setSavedDocs((prev) => [newDoc, ...prev]);
-      setDocFile(null);
-      return newDoc;
+      setSavedDocs((prev) => [...newDocs, ...prev]);
+      setDocFiles([]);
+      return newDocs;
     } finally {
       setUploading(false);
       setUploadMsg("");
@@ -298,9 +294,9 @@ export default function CommunityRegistration() {
         if (!commId) throw new Error("Community profile is not ready yet. Please save Step 1 again.");
         await communityService.saveMembers(commId, members);
 
-        if (docFile) {
-          await uploadDocumentNow(commId, docFile);
-          setToast({ type: "success", message: "✓ ID document uploaded and saved", key: Date.now() });
+        if (docFiles.length > 0) {
+          await uploadDocumentsNow(commId, docFiles);
+          setToast({ type: "success", message: "✓ ID documents uploaded and saved", key: Date.now() });
         }
       }
 
@@ -553,7 +549,7 @@ export default function CommunityRegistration() {
           {step === 2 && (
             <Step2TeamAndDocs
               members={members} setMembers={setMembers}
-              docFile={docFile} setDocFile={setDocFile}
+              docFiles={docFiles} setDocFiles={setDocFiles}
               savedDocs={savedDocs}
               errors={errors}
             />

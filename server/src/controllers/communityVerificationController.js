@@ -8,7 +8,7 @@
 // ============================================================
 
 import { query, getClient } from '../config/db.js';
-import { uploadVerificationDocument, uploadExperienceImages } from '../services/uploadService.js';
+import { uploadVerificationDocuments, uploadExperienceImages } from '../services/uploadService.js';
 import { ApiError }    from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -148,32 +148,50 @@ export const saveCommunityMembers = asyncHandler(async (req, res) => {
 });
 
 // ─── POST /communities/:id/documents ─────────────────────────
-// Upload a single ID bundle PDF (or image).
+// Upload multiple ID documents (PDFs or images).
 // Field name: 'document'   (multipart/form-data)
 // Body param: doc_type (optional, default 'id_bundle')
 export const uploadCommunityDocument = asyncHandler(async (req, res) => {
   const { id } = req.params;
   await assertOwner(id, req.user.id);
 
-  if (!req.file) throw new ApiError(400, 'No document file provided');
+  if (!req.files || req.files.length === 0) {
+    throw new ApiError(400, 'No document files provided');
+  }
 
   const docType = req.body.doc_type || 'id_bundle';
+  const insertedDocuments = [];
 
-  // Upload to Cloudinary bond/documents folder
-  const uploaded = await uploadVerificationDocument(req.file.buffer, id);
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    
+    // Upload all documents to Cloudinary in parallel
+    const buffers = req.files.map((f) => f.buffer);
+    const uploadedFiles = await uploadVerificationDocuments(buffers, id);
 
-  const result = await query(
-    `INSERT INTO community_documents
-       (community_id, doc_type, file_url, file_public_id, uploaded_by)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING *`,
-    [id, docType, uploaded.url, uploaded.publicId, req.user.id]
-  );
+    for (const uploaded of uploadedFiles) {
+      const result = await client.query(
+        `INSERT INTO community_documents
+           (community_id, doc_type, file_url, file_public_id, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [id, docType, uploaded.url, uploaded.publicId, req.user.id]
+      );
+      insertedDocuments.push(result.rows[0]);
+      logger.info(`Community document uploaded: community=${id} document=${result.rows[0].id} public_id=${uploaded.publicId}`);
+    }
 
-  await advanceStep(id, 2);
-  logger.info(`Community document uploaded: community=${id} document=${result.rows[0].id} public_id=${uploaded.publicId}`);
+    await client.query('COMMIT');
+    await advanceStep(id, 2);
 
-  res.status(201).json(new ApiResponse(201, { document: result.rows[0] }, 'Document uploaded'));
+    res.status(201).json(new ApiResponse(201, { documents: insertedDocuments }, `${insertedDocuments.length} document(s) uploaded`));
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 });
 
 // ─── POST /communities/:id/offerings ─────────────────────────
