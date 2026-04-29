@@ -152,7 +152,7 @@ export const getBookingById = asyncHandler(async (req, res) => {
             e.title AS experience_title, e.cover_image_url,
             e.duration_hours, e.meeting_point,
             c.name AS community_name, c.village, c.state,
-            u.name AS tourist_name, u.email AS tourist_email
+            u.full_name AS tourist_name, u.email AS tourist_email
      FROM bookings b
      JOIN experiences e ON e.id = b.experience_id
      JOIN communities c ON c.id = b.community_id

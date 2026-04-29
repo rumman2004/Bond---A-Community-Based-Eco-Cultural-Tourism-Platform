@@ -10,3 +10,5 @@ export { default as Textarea } from './Textarea';
 export { default as Avatar } from './Avatar';
 export { default as Dropdown } from './Dropdown';
 export { default as Tooltip } from './Tooltip';
+export { default as MetricCard } from './MetricCard';
+export { default as EmptyState } from './EmptyState';

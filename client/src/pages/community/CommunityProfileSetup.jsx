@@ -149,40 +149,52 @@ function SustainabilityTagPicker({ selectedIds, onChange }) {
   );
 }
 
-function CoverUploader({ communityId, currentUrl, onUploaded }) {
+function CoverUploader({ communityId, currentUrl, currentImages = [], onUploaded, onImagesUploaded }) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(currentUrl || "");
+  const [gallery, setGallery] = useState(currentImages);
   const inputRef = useRef(null);
   useEffect(() => { setPreview(currentUrl || ""); }, [currentUrl]);
+  useEffect(() => { setGallery(currentImages || []); }, [currentImages]);
 
   const handleFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPreview(URL.createObjectURL(file));
+    const selected = Array.from(e.target.files || []).slice(0, 5);
+    if (!selected.length) return;
+    const previewUrls = selected.map((file) => ({ image_url: URL.createObjectURL(file) }));
+    setPreview(previewUrls[0].image_url);
+    setGallery((prev) => [...previewUrls, ...(prev || [])].slice(0, 5));
     setUploading(true);
     try {
       if (communityId) {
         const fd = new FormData();
-        fd.append("image", file);
-        const res = await communityService.updateCover(communityId, fd);
-        const url = res?.data?.community?.cover_image_url ?? res?.data?.cover_url ?? res?.cover_url;
-        if (url) onUploaded(url);
+        selected.forEach((file) => fd.append("images", file));
+        const res = await communityService.uploadImages(communityId, fd);
+        const images = res?.data?.images ?? res?.images ?? [];
+        const firstUrl = images[0]?.image_url;
+        if (firstUrl) onUploaded(firstUrl);
+        if (images.length) {
+          setGallery((prev) => [...images, ...(prev || []).filter((image) => !image.image_url?.startsWith("blob:"))].slice(0, 5));
+          onImagesUploaded?.(images);
+        }
       } else {
-        const res = await uploadService.uploadImage(file, UPLOAD_FOLDERS.COMMUNITY);
-        const url = res?.data?.url ?? res?.url;
-        if (url) onUploaded(url);
+        const res = await uploadService.uploadImages(selected, UPLOAD_FOLDERS.COMMUNITY);
+        const images = res?.data?.images ?? res?.images ?? [];
+        const firstUrl = images[0]?.url;
+        if (firstUrl) onUploaded(firstUrl);
       }
     } catch (err) {
-      console.error("Cover upload failed:", err);
+      console.error("Community image upload failed:", err);
       setPreview(currentUrl || "");
+      setGallery(currentImages || []);
     } finally {
       setUploading(false);
+      e.target.value = "";
     }
   };
 
   return (
     <div>
-      <label className="block text-xs font-semibold uppercase tracking-widest text-[#9A9285] mb-2">Cover Photo</label>
+      <label className="block text-xs font-semibold uppercase tracking-widest text-[#9A9285] mb-2">Cover Photos</label>
       <div onClick={() => inputRef.current?.click()}
         className="relative flex h-48 w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-[#D4C9BB] bg-[#F5F2EE] transition-all hover:border-[#3E7A58] hover:bg-[#EEF5F1]"
       >
@@ -192,7 +204,7 @@ function CoverUploader({ communityId, currentUrl, onUploaded }) {
           <div className="flex flex-col items-center gap-2 text-[#9A9285]">
             <Upload size={24} />
             <p className="text-sm font-medium">Upload cover photo</p>
-            <p className="text-xs">JPG, PNG · max 5MB · 1200×630 recommended</p>
+            <p className="text-xs">Select up to 5 JPG/PNG images · 1200×630 recommended</p>
           </div>
         )}
         {uploading && (
@@ -201,7 +213,19 @@ function CoverUploader({ communityId, currentUrl, onUploaded }) {
           </div>
         )}
       </div>
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      {gallery.length > 0 && (
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {gallery.slice(0, 5).map((image, index) => (
+            <img
+              key={`${image.id || image.image_url}-${index}`}
+              src={image.image_url}
+              alt={`Community cover ${index + 1}`}
+              className="h-16 w-full rounded-xl object-cover"
+            />
+          ))}
+        </div>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
     </div>
   );
 }
@@ -240,6 +264,7 @@ function ProfileView({ community, tags, languages, onEditClick }) {
     community.pincode && { icon: Hash,      label: "Pincode",  value: community.pincode },
     community.best_visit_season && { icon: Sun, label: "Best Season", value: community.best_visit_season },
   ].filter(Boolean);
+  const gallery = (community.images || []).map((image) => image.image_url).filter(Boolean);
 
   return (
     <div className="max-w-2xl space-y-5">
@@ -271,6 +296,13 @@ function ProfileView({ community, tags, languages, onEditClick }) {
             Edit profile
           </button>
         </div>
+        {gallery.length > 1 && (
+          <div className="grid grid-cols-4 gap-2 px-6 pb-6">
+            {gallery.slice(1, 5).map((image, index) => (
+              <img key={image} src={image} alt={`${community.name} gallery ${index + 1}`} className="h-20 w-full rounded-xl object-cover" />
+            ))}
+          </div>
+        )}
 
         {/* Name & description */}
         <div className="p-6 space-y-3">
@@ -380,7 +412,7 @@ function ProfileView({ community, tags, languages, onEditClick }) {
 }
 
 // ─── Edit Form ────────────────────────────────────────────────
-function EditForm({ form, setForm, languages, setLanguages, tagIds, setTagIds, coverUrl, setCoverUrl,
+function EditForm({ form, setForm, languages, setLanguages, tagIds, setTagIds, coverUrl, setCoverUrl, coverImages, setCoverImages,
   commId, saving, fieldErrors, onSubmit, onCancel }) {
   const update = e => {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -397,7 +429,13 @@ function EditForm({ form, setForm, languages, setLanguages, tagIds, setTagIds, c
       </button>
 
       {/* Cover photo */}
-      <CoverUploader communityId={commId} currentUrl={coverUrl} onUploaded={setCoverUrl} />
+      <CoverUploader
+        communityId={commId}
+        currentUrl={coverUrl}
+        currentImages={coverImages}
+        onUploaded={setCoverUrl}
+        onImagesUploaded={(images) => setCoverImages((prev) => [...images, ...(prev || [])].slice(0, 5))}
+      />
 
       {/* Identity */}
       <div className="bg-white rounded-2xl border border-[#E8E1D5] p-5 space-y-5">
@@ -474,6 +512,7 @@ export default function CommunityProfileSetup() {
   const [languages,   setLanguages]   = useState([]);
   const [tagIds,      setTagIds]      = useState([]);
   const [coverUrl,    setCoverUrl]    = useState("");
+  const [coverImages, setCoverImages] = useState([]);
   const [commId,      setCommId]      = useState(null);
   const [community,   setCommunity]   = useState(null);   // full community object
   const [tags,        setTags]        = useState([]);      // [{id,label,icon}]
@@ -506,6 +545,7 @@ export default function CommunityProfileSetup() {
         setTags(c.tags ?? []);
         setTagIds(c.tags?.map(t => t.id).filter(Boolean) ?? []);
         setCoverUrl(c.cover_image_url ?? "");
+        setCoverImages(c.images ?? []);
       })
       .catch(err => {
         if (err?.status !== 404 && err?.response?.status !== 404) {
@@ -595,6 +635,7 @@ export default function CommunityProfileSetup() {
           languages={languages} setLanguages={setLanguages}
           tagIds={tagIds} setTagIds={setTagIds}
           coverUrl={coverUrl} setCoverUrl={setCoverUrl}
+          coverImages={coverImages} setCoverImages={setCoverImages}
           commId={commId}
           saving={saving}
           fieldErrors={fieldErrors}

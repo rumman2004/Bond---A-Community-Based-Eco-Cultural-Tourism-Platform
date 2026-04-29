@@ -23,8 +23,10 @@ import multer from 'multer';
 import { ApiError } from '../utils/apiError.js';
 
 // ── Allowed MIME types ────────────────────────────────────────
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-const MAX_FILE_SIZE_MB   = 5;
+const ALLOWED_MIME_TYPES      = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const ALLOWED_DOC_MIME_TYPES  = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+const MAX_FILE_SIZE_MB        = 5;
+const MAX_DOC_SIZE_MB         = 10;
 
 // ── Storage: memory (no disk writes) ─────────────────────────
 const storage = multer.memoryStorage();
@@ -41,12 +43,33 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// ── Base multer instance ──────────────────────────────────────
+// ── Base multer instance (images only) ──────────────────────
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: MAX_FILE_SIZE_MB * 1024 * 1024, // bytes
+    fileSize: MAX_FILE_SIZE_MB * 1024 * 1024,
+  },
+});
+
+// ── Document file filter (PDF + common image types) ──────────
+const docFileFilter = (req, file, cb) => {
+  if (ALLOWED_DOC_MIME_TYPES.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(
+      new ApiError(400, `Invalid file type. Allowed: PDF, JPG, PNG`),
+      false
+    );
+  }
+};
+
+// ── Document multer instance (PDF, 10 MB) ────────────────────
+const uploadDoc = multer({
+  storage,
+  fileFilter: docFileFilter,
+  limits: {
+    fileSize: MAX_DOC_SIZE_MB * 1024 * 1024,
   },
 });
 
@@ -69,6 +92,18 @@ export const uploadMultiple = upload.array('images', 5);
 // Accepts up to 3 evidence images in the 'evidence' field.
 // Sets req.files — available for report submissions if needed.
 export const uploadReport = upload.array('evidence', 3);
+
+// ── uploadDocument ────────────────────────────────────────────
+// Accepts a single PDF (or image) in the 'document' field.
+// Max 10 MB. Used by:
+//   communityVerificationController.uploadCommunityDocument
+export const uploadDocument = uploadDoc.single('document');
+
+// ── uploadOfferingImages ──────────────────────────────────────
+// Accepts up to 5 images in the 'images' field.
+// Used by:
+//   communityVerificationController.uploadOfferingImages
+export const uploadOfferingImages = upload.array('images', 5);
 
 // ── Error wrapper ─────────────────────────────────────────────
 // Multer errors don't go through asyncHandler automatically.

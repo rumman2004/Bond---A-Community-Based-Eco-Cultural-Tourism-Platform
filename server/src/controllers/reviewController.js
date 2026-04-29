@@ -11,7 +11,7 @@ export const getExperienceReviews = asyncHandler(async (req, res) => {
 
   const result = await query(
     `SELECT r.id, r.rating, r.title, r.body, r.created_at,
-            u.name AS tourist_name, u.avatar_url AS tourist_avatar
+            u.full_name AS tourist_name, u.avatar_url AS tourist_avatar
      FROM reviews r
      JOIN users u ON u.id = r.tourist_id
      WHERE r.experience_id = $1 AND r.is_visible = TRUE

@@ -6,18 +6,38 @@ import {
   createCommunity,
   updateCommunity,
   updateCoverImage,
+  uploadCommunityImages,
   updateSustainabilityTags,
   getCommunityStats,
 } from '../controllers/communityController.js';
+import {
+  getVerificationData,
+  saveCommunityMembers,
+  uploadCommunityDocument,
+  saveCommunityOfferings,
+  uploadOfferingImages,
+  recordConsent,
+} from '../controllers/communityVerificationController.js';
 import { authenticate }  from '../middlewares/authMiddleware.js';
 import { authorize }     from '../middlewares/roleMiddleware.js';
 import { validate }      from '../middlewares/validateRequest.js';
-import { uploadSingle }  from '../middlewares/uploadMiddleware.js';
+import {
+  uploadSingle,
+  uploadMultiple,
+  uploadDocument,
+  uploadOfferingImages as multerOfferingImages,
+  handleUpload,
+} from '../middlewares/uploadMiddleware.js';
 import {
   createCommunitySchema,
   updateCommunitySchema,
   sustainabilityTagsSchema,
 } from '../validators/communityValidator.js';
+import {
+  membersSchema,
+  offeringsSchema,
+  consentSchema,
+} from '../validators/communityVerificationValidator.js';
 
 const router = Router();
 
@@ -63,8 +83,16 @@ router.patch(
   '/:id/cover',
   authenticate,
   authorize('community'),
-  uploadSingle,
+  handleUpload(uploadSingle),
   updateCoverImage
+);
+
+router.post(
+  '/:id/images',
+  authenticate,
+  authorize('community'),
+  handleUpload(uploadMultiple),
+  uploadCommunityImages
 );
 
 router.patch(
@@ -73,6 +101,60 @@ router.patch(
   authorize('community'),
   validate(sustainabilityTagsSchema),
   updateSustainabilityTags
+);
+
+// ── Verification wizard routes (owner only) ───────────────────
+// GET full verification data (owner + security can both use this)
+router.get(
+  '/:id/verification',
+  authenticate,
+  authorize('community', 'security', 'admin'),
+  getVerificationData
+);
+
+// Step 2A — save team members list
+router.post(
+  '/:id/members',
+  authenticate,
+  authorize('community'),
+  validate(membersSchema),
+  saveCommunityMembers
+);
+
+// Step 2B — upload ID bundle PDF
+router.post(
+  '/:id/documents',
+  authenticate,
+  authorize('community'),
+  handleUpload(uploadDocument),
+  uploadCommunityDocument
+);
+
+// Step 3A — save offerings
+router.post(
+  '/:id/offerings',
+  authenticate,
+  authorize('community'),
+  validate(offeringsSchema),
+  saveCommunityOfferings
+);
+
+// Step 3B — upload images for a specific offering
+router.post(
+  '/:id/offerings/:oid/images',
+  authenticate,
+  authorize('community'),
+  handleUpload(multerOfferingImages),
+  uploadOfferingImages
+);
+
+// Step 4 — record consent / T&C acceptance
+router.post(
+  '/:id/consent',
+  authenticate,
+  authorize('community'),
+  validate(consentSchema),
+  recordConsent
 );
 
 export default router;

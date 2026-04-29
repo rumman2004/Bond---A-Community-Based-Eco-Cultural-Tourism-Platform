@@ -109,11 +109,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
 // ─── Logout ──────────────────────────────────────────────────
 export const logout = asyncHandler(async (req, res) => {
   res
-    .clearCookie('refreshToken', {
-      httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-    })
+    .clearCookie('refreshToken', { httpOnly: true, sameSite: 'Strict' })
     .json(new ApiResponse(200, null, 'Logged out successfully'));
 });
 
@@ -178,6 +174,6 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 const cookieOptions = () => ({
   httpOnly: true,
   secure:   process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Strict',
   maxAge:   7 * 24 * 60 * 60 * 1000, // 7 days
 });

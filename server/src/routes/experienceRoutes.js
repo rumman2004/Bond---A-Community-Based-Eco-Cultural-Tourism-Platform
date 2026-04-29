@@ -5,12 +5,13 @@ import {
   createExperience,
   updateExperience,
   updateExperienceCover,
+  uploadExperienceImages,
   deleteExperience,
 } from '../controllers/experienceController.js';
-import { authenticate, optionalProtect } from '../middlewares/authMiddleware.js';
+import { authenticate } from '../middlewares/authMiddleware.js';
 import { authorize }    from '../middlewares/roleMiddleware.js';
 import { validate }     from '../middlewares/validateRequest.js';
-import { uploadSingle } from '../middlewares/uploadMiddleware.js';
+import { handleUpload, uploadMultiple, uploadSingle } from '../middlewares/uploadMiddleware.js';
 import {
   createExperienceSchema,
   updateExperienceSchema,
@@ -19,7 +20,7 @@ import {
 const router = Router();
 
 // ── Public ────────────────────────────────────────────────────
-router.get('/',        optionalProtect, getExperiences);
+router.get('/',        getExperiences);
 router.get('/:slug',   getExperienceBySlug);
 
 // ── Community owner only ──────────────────────────────────────
@@ -43,8 +44,16 @@ router.patch(
   '/:id/cover',
   authenticate,
   authorize('community'),
-  uploadSingle,
+  handleUpload(uploadSingle),
   updateExperienceCover
+);
+
+router.post(
+  '/:id/images',
+  authenticate,
+  authorize('community'),
+  handleUpload(uploadMultiple),
+  uploadExperienceImages
 );
 
 router.delete(

@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { MapPin, Star, ShieldCheck } from "lucide-react";
 import { gsap } from "gsap";
 import SustainabilityTags from "./SustainabilityTags";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function CommunityCard({ community }) {
+  const { user } = useAuth();
   const cardRef  = useRef(null);
   const imageRef = useRef(null);
 
@@ -14,7 +16,8 @@ export default function CommunityCard({ community }) {
   // community.avg_rating, community.status, community.tags (from junction)
   // community.short_description
   const slug        = community.slug || community.id;
-  const image       = community.cover_image_url || community.image;
+  const image       = community.images?.[0]?.image_url || community.cover_image_url || community.image;
+  const href        = `${user?.role === "tourist" ? "/tourist" : ""}/community/${slug}`;
   const location    = [community.village, community.district, community.state].filter(Boolean).join(", ") || community.location || "India";
   const rating      = community.avg_rating ?? community.rating;
   const isVerified  = community.status === "verified" || community.verified;
@@ -31,7 +34,7 @@ export default function CommunityCard({ community }) {
   };
 
   return (
-    <Link to={`/community/${slug}`}>
+    <Link to={href}>
       <article
         ref={cardRef}
         onMouseEnter={handleEnter}

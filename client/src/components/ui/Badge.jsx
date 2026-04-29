@@ -3,7 +3,8 @@
  *
  * Props:
  *  variant   "eco" | "culture" | "verified" | "new" | "pending"
- *            | "danger" | "info" | "neutral"
+ *            | "danger" | "info" | "neutral" | "success"
+ *            | "warning" | "default" | "outline"
  *  size      "sm" | "md"
  *  icon      Lucide icon component
  *  dot       boolean — show a color dot instead of icon
@@ -20,7 +21,15 @@ const variants = {
     wrap: "bg-[#D4E6DC] text-[#1C3D2E] border-[#A8CCBA]",
     dot: "bg-[#3E7A58]",
   },
+  success: {
+    wrap: "bg-[#D4E6DC] text-[#1C3D2E] border-[#A8CCBA]",
+    dot: "bg-[#3E7A58]",
+  },
   culture: {
+    wrap: "bg-[#F5E4CA] text-[#7A4E10] border-[#E8B96A]",
+    dot: "bg-[#C8883A]",
+  },
+  warning: {
     wrap: "bg-[#F5E4CA] text-[#7A4E10] border-[#E8B96A]",
     dot: "bg-[#C8883A]",
   },
@@ -41,12 +50,20 @@ const variants = {
     dot: "bg-[#D4735A]",
   },
   info: {
-    wrap: "bg-[#EAF4EE] text-[#1C3D2E] border-[#A8CCBA]",
-    dot: "bg-[#3E7A58]",
+    wrap: "bg-[#D8EEF2] text-[#256D85] border-[#9BCAD4]",
+    dot: "bg-[#256D85]",
   },
   neutral: {
     wrap: "bg-[#F2EDE4] text-[#7A9285] border-[#D9D0C2]",
     dot: "bg-[#7A9285]",
+  },
+  default: {
+    wrap: "bg-white text-[#3D5448] border-[#D9D0C2]",
+    dot: "bg-[#5C8C72]",
+  },
+  outline: {
+    wrap: "bg-transparent text-current border-current",
+    dot: "bg-current",
   },
 };
 

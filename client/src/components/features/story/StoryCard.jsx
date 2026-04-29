@@ -2,13 +2,15 @@ import { Link } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { Card } from "../../ui";
 import { formatDate } from "../../../utils/dateUtils";
-import { DEFAULT_IMAGE } from "../../../utils/constants";
 
 export default function StoryCard({ story }) {
+  const image = story.cover_image_url || story.image || "";
   return (
     <Link to={`/stories/${story.id}`}>
       <Card variant="experience" padding="none" hover>
-        <Card.Image src={story.image || DEFAULT_IMAGE} alt={story.title} />
+        <Card.Image src={image} alt={story.title}>
+          <BookOpen size={34} />
+        </Card.Image>
         <div className="p-5">
           <p className="flex items-center gap-2 text-xs text-[#7A9285]"><BookOpen size={13} /> {story.communityName || "Community story"}</p>
           <h3 className="mt-2 font-display text-xl text-[#1A2820]">{story.title}</h3>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { gsap } from "gsap";
 import {
   Search, MapPin, Star, SlidersHorizontal, X, Leaf,
@@ -63,13 +63,15 @@ function SkeletonCard({ view }) {
 /* ── Experience card ── */
 function ExploreCard({ exp, view }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const ref = useRef(null);
 
   useEffect(() => {
     gsap.fromTo(ref.current, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" });
   }, []);
 
-  const target = `/experience/${exp.slug || exp.id}`;
+  const inTouristArea = location.pathname.startsWith("/tourist");
+  const target = `${inTouristArea ? "/tourist" : ""}/experience/${exp.slug || exp.id}`;
 
   if (view === "list") {
     return (
@@ -86,11 +88,17 @@ function ExploreCard({ exp, view }) {
         onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "var(--shadow-card)")}
       >
         <div className="relative w-40 flex-shrink-0 overflow-hidden">
-          <img
-            src={exp.img}
-            alt={exp.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
+          {exp.img ? (
+            <img
+              src={exp.img}
+              alt={exp.name}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-[#D4E6DC] text-[#3E7A58]">
+              <Leaf size={24} />
+            </div>
+          )}
           {exp.eco && (
             <div
               className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center"
@@ -145,11 +153,17 @@ function ExploreCard({ exp, view }) {
       onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "var(--shadow-card)")}
     >
       <div className="relative h-48 overflow-hidden">
-        <img
-          src={exp.img}
-          alt={exp.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        {exp.img ? (
+          <img
+            src={exp.img}
+            alt={exp.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-[#D4E6DC] text-[#3E7A58]">
+            <Leaf size={34} />
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
         <div className="absolute top-3 left-3 flex gap-2 items-center">
           <Tag label={exp.tag} color={exp.tagColor} />
@@ -240,7 +254,7 @@ export default function Explore() {
           price: parseFloat(e.price_per_person) || 0,
           duration: e.duration_days ? `${e.duration_days} day${e.duration_days > 1 ? "s" : ""}` : "1 day",
           eco: e.eco_certified ?? true,
-          img: e.cover_image_url || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=500&q=75",
+          img: e.images?.[0]?.image_url || e.cover_image_url || "",
         }));
         setExperiences(mapped);
       })

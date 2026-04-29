@@ -4,6 +4,34 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
+const attachExperienceImages = async (experiences) => {
+  if (!experiences?.length) return experiences;
+  try {
+    const ids = experiences.map((experience) => experience.id);
+    const imagesResult = await query(
+      `SELECT id, experience_id, image_url, image_public_id, caption, sort_order, is_primary, created_at
+       FROM experience_images
+       WHERE experience_id = ANY($1)
+       ORDER BY is_primary DESC, sort_order ASC, created_at ASC`,
+      [ids]
+    );
+    const byExperience = new Map();
+    imagesResult.rows.forEach((image) => {
+      if (!byExperience.has(image.experience_id)) byExperience.set(image.experience_id, []);
+      byExperience.get(image.experience_id).push(image);
+    });
+    experiences.forEach((experience) => {
+      experience.images = byExperience.get(experience.id) || [];
+    });
+  } catch (err) {
+    if (err.code !== '42P01') throw err;
+    experiences.forEach((experience) => {
+      experience.images = [];
+    });
+  }
+  return experiences;
+};
+
 // ─── Get all active experiences (public, explore page) ───────
 export const getExperiences = asyncHandler(async (req, res) => {
   const {
@@ -11,21 +39,11 @@ export const getExperiences = asyncHandler(async (req, res) => {
     min_price, max_price, tag, search,
     page = 1, limit = 12,
     sort = 'popularity_score',
-    mine,
   } = req.query;
 
   const offset = (parseInt(page) - 1) * parseInt(limit);
   const params = [];
-  let filters = [];
-
-  if (mine === 'true' && req.user) {
-    filters.push("e.status != 'archived'");
-    params.push(req.user.id);
-    filters.push(`c.user_id = $${params.length}`);
-  } else {
-    filters.push("e.status = 'active'");
-    filters.push("c.status = 'verified'");
-  }
+  const filters = ["e.status = 'active'", "c.status = 'verified'"];
 
   if (community_id) { params.push(community_id); filters.push(`e.community_id = $${params.length}`); }
   if (category)     { params.push(category);     filters.push(`e.category = $${params.length}`); }
@@ -74,6 +92,7 @@ export const getExperiences = asyncHandler(async (req, res) => {
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );
+  await attachExperienceImages(result.rows);
 
   res.setHeader('X-Total-Count', total);
   res.json(new ApiResponse(200, {
@@ -128,6 +147,7 @@ export const getExperienceBySlug = asyncHandler(async (req, res) => {
     [experience.id]
   );
   experience.recent_reviews = reviewsResult.rows;
+  await attachExperienceImages([experience]);
 
   res.json(new ApiResponse(200, { experience }));
 });
@@ -258,6 +278,70 @@ export const updateExperienceCover = asyncHandler(async (req, res) => {
   );
 
   res.json(new ApiResponse(200, { experience: result.rows[0] }, 'Cover image updated'));
+});
+
+// ─── Upload multiple experience images ───────────────────────
+export const uploadExperienceImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!req.files?.length) throw new ApiError(400, 'No images provided');
+
+  const check = await query(
+    `SELECT e.id
+     FROM experiences e
+     JOIN communities c ON c.id = e.community_id
+     WHERE e.id = $1 AND c.user_id = $2`,
+    [id, req.user.id]
+  );
+  if (!check.rows[0]) throw new ApiError(403, 'Not authorized or experience not found');
+
+  const existingResult = await query(
+    'SELECT COUNT(*) FROM experience_images WHERE experience_id = $1',
+    [id]
+  );
+  const existing = Number(existingResult.rows[0]?.count || 0);
+  if (existing + req.files.length > 5) {
+    throw new ApiError(400, `Maximum 5 experience images allowed (already has ${existing})`);
+  }
+
+  const uploads = await Promise.all(
+    req.files.map((file) =>
+      uploadToCloudinary(file.buffer, 'experiences/covers', {
+        transformation: [{ width: 1200, height: 675, crop: 'fill' }],
+      })
+    )
+  );
+
+  const insertedImages = [];
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    for (let i = 0; i < uploads.length; i += 1) {
+      const isPrimary = existing === 0 && i === 0;
+      const imageResult = await client.query(
+        `INSERT INTO experience_images
+           (experience_id, image_url, image_public_id, caption, sort_order, is_primary)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *`,
+        [id, uploads[i].secure_url, uploads[i].public_id, req.body.caption || null, existing + i, isPrimary]
+      );
+      insertedImages.push(imageResult.rows[0]);
+    }
+
+    await client.query(
+      `UPDATE experiences
+       SET cover_image_url = COALESCE(cover_image_url, $1)
+       WHERE id = $2`,
+      [uploads[0].secure_url, id]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  res.status(201).json(new ApiResponse(201, { images: insertedImages }, 'Experience images uploaded'));
 });
 
 // ─── Delete experience (soft archive) ───────────────────────

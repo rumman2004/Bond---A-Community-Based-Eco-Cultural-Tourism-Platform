@@ -1,11 +1,9 @@
-import { v2 as cloudinary } from "cloudinary";
 import { Readable } from "stream";
-import { cloudinaryConfig } from "../config/cloudinary.js";
+// Importing cloudinary.js runs cloudinary.config() at the top level,
+// so the returned default is already configured.
+import cloudinary from "../config/cloudinary.js";
 import { ApiError } from "../utils/apiError.js";
 import { logger } from "../utils/logger.js";
-
-// Ensure cloudinary is configured (calls cloudinary.config() from your config file)
-cloudinaryConfig();
 
 // ─── Folder Map ───────────────────────────────────────────────────────────────
 // Keeps all Bond assets organised in Cloudinary under a single root folder.

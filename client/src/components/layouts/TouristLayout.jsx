@@ -19,14 +19,14 @@ export default function TouristLayout() {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
-      style={{ backgroundColor: "var(--color-cream)" }}
+      className="app-shell-bg min-h-screen flex flex-col"
+      style={{ color: "var(--color-text-dark)" }}
     >
       <TouristNav />
 
       <main
         ref={mainRef}
-        className="flex-1 pt-16"
+        className="flex-1 pt-20"
       >
         <Outlet />
       </main>

@@ -29,6 +29,13 @@
   --color-terracotta-mid: #EBB8AA;
   --color-terracotta-light: #FAF0EC;
 
+  --color-river: #256D85;
+  --color-river-light: #D8EEF2;
+  --color-indigo: #33415C;
+  --color-indigo-light: #E6EAF2;
+  --color-rosewood: #8F3E46;
+  --color-rosewood-light: #F7E6E8;
+
   --color-text-dark: #1A2820;
   --color-text-mid: #3D5448;
   --color-text-muted: #7A9285;
@@ -38,7 +45,7 @@
   --color-border-mid: rgba(28, 61, 46, 0.22);
 
   /* Radius */
-  --radius-card: 14px;
+  --radius-card: 12px;
   --radius-btn: 9px;
   --radius-pill: 9999px;
 
@@ -48,9 +55,9 @@
   --font-body: "Inter", system-ui, sans-serif;
 
   /* Shadows */
-  --shadow-card: 0 4px 20px rgba(28, 61, 46, 0.08);
-  --shadow-card-hover: 0 12px 32px rgba(28, 61, 46, 0.12);
-  --shadow-modal: 0 24px 64px rgba(15, 36, 25, 0.18);
+  --shadow-card: 0 1px 2px rgba(28, 61, 46, 0.05), 0 14px 32px rgba(28, 61, 46, 0.07);
+  --shadow-card-hover: 0 18px 42px rgba(28, 61, 46, 0.13);
+  --shadow-modal: 0 28px 70px rgba(15, 36, 25, 0.2);
 }
 
 /* ─────────────────────────────────────────────
@@ -71,9 +78,30 @@ html {
 
 body {
   font-family: var(--font-body);
+  background:
+    linear-gradient(180deg, rgba(250, 247, 242, 0.96), rgba(242, 237, 228, 0.98)),
+    radial-gradient(circle at 12% 0%, rgba(37, 109, 133, 0.12), transparent 34%),
+    radial-gradient(circle at 92% 10%, rgba(200, 136, 58, 0.12), transparent 30%);
   background-color: var(--color-cream);
   color: var(--color-text-dark);
   line-height: 1.6;
+  min-width: 320px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+img {
+  max-width: 100%;
 }
 
 /* ─────────────────────────────────────────────
@@ -86,6 +114,41 @@ body {
 
 .font-sans-bond {
   font-family: var(--font-sans);
+}
+
+.app-shell-bg {
+  background:
+    linear-gradient(180deg, rgba(250, 247, 242, 0.98), rgba(242, 237, 228, 0.98)),
+    radial-gradient(circle at 15% 10%, rgba(37, 109, 133, 0.10), transparent 28%),
+    radial-gradient(circle at 85% 0%, rgba(200, 136, 58, 0.11), transparent 24%);
+}
+
+.surface-panel {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(28, 61, 46, 0.11);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(16px);
+}
+
+.hairline-grid {
+  background-image:
+    linear-gradient(rgba(28, 61, 46, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28, 61, 46, 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.professional-band {
+  background:
+    linear-gradient(135deg, rgba(15, 36, 25, 0.98), rgba(37, 109, 133, 0.88)),
+    radial-gradient(circle at 10% 10%, rgba(232, 185, 106, 0.24), transparent 35%);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.content-fade {
+  animation: fadeUp 0.45s ease both;
 }
 
 /* ─────────────────────────────────────────────
@@ -155,4 +218,16 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-forest-light);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
 }

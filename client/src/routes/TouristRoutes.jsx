@@ -9,6 +9,7 @@ import Interests from "../pages/tourist/Interests";
 import Explore from "../components/common/Explore";
 import CommunityDetails from "../components/common/CommunityDetails";
 import ExperienceDetails from "../components/common/ExperienceDetails";
+import StoryView from "../components/common/StoryView";
 
 
 export default function TouristRoutes() {
@@ -22,6 +23,7 @@ export default function TouristRoutes() {
       <Route path="explore" element={<Explore />} />
       <Route path="community/:id" element={<CommunityDetails />} />
       <Route path="experience/:id" element={<ExperienceDetails />} />
+      <Route path="story/:id" element={<StoryView />} />
     </Route>
   );
 }

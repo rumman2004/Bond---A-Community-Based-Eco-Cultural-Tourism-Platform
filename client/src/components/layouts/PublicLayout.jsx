@@ -20,8 +20,8 @@ export default function PublicLayout() {
   return (
     <div
       ref={wrapRef}
-      className="min-h-screen flex flex-col"
-      style={{ backgroundColor: "var(--color-cream)", color: "var(--color-text-dark)" }}
+      className="app-shell-bg min-h-screen flex flex-col"
+      style={{ color: "var(--color-text-dark)" }}
     >
       <PublicNav />
 

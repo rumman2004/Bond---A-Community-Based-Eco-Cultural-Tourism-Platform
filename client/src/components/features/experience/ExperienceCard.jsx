@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { Clock, MapPin, Star, Users } from "lucide-react";
 import { gsap } from "gsap";
 import { formatCurrency } from "../../../utils/formatters";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function ExperienceCard({ experience }) {
+  const { user } = useAuth();
   const cardRef  = useRef(null);
   const imageRef = useRef(null);
 
@@ -14,7 +16,8 @@ export default function ExperienceCard({ experience }) {
   // experience.duration_hours, duration_days, difficulty
   // experience.community_name, community_slug, village, state
   const slug        = experience.slug || experience.id;
-  const image       = experience.cover_image_url || experience.image;
+  const image       = experience.images?.[0]?.image_url || experience.cover_image_url || experience.image;
+  const href        = `${user?.role === "tourist" ? "/tourist" : ""}/experience/${slug}`;
   const price       = experience.price_per_person ?? experience.price ?? 0;
   const rating      = experience.avg_rating ?? experience.rating;
   const location    = [experience.village, experience.state].filter(Boolean).join(", ") || experience.community_location || experience.location;
@@ -35,7 +38,7 @@ export default function ExperienceCard({ experience }) {
   };
 
   return (
-    <Link to={`/experience/${slug}`}>
+    <Link to={href}>
       <article
         ref={cardRef}
         onMouseEnter={handleEnter}

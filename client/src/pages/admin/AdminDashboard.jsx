@@ -1,88 +1,45 @@
 import { useEffect, useState } from "react";
-import { Users, Home, Leaf, Calendar, Coins, CheckCircle, Hourglass, ShieldAlert, Lock, AlertTriangle } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  CheckCircle,
+  Coins,
+  Home,
+  Hourglass,
+  Leaf,
+  Lock,
+  ShieldAlert,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import PageShell from "../PageShell";
 import api from "../../services/api";
+import { Card, MetricCard } from "../../components/ui";
 
-const StatCard = ({ label, value, sub, highlight, icon }) => (
-  <div
-    style={{
-      background: highlight
-        ? "linear-gradient(135deg, #7c2d12 0%, #9a3412 100%)"
-        : "linear-gradient(135deg, #fff8f0 0%, #fef3e2 100%)",
-      border: highlight ? "none" : "1px solid #e8d9c4",
-      borderRadius: "16px",
-      padding: "24px",
-      position: "relative",
-      overflow: "hidden",
-      transition: "transform 0.2s ease, box-shadow 0.2s ease",
-      cursor: "default",
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.transform = "translateY(-2px)";
-      e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.12)";
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.transform = "translateY(0)";
-      e.currentTarget.style.boxShadow = "none";
-    }}
-  >
-    {/* Decorative circle */}
-    <div style={{
-      position: "absolute", top: "-20px", right: "-20px",
-      width: "80px", height: "80px", borderRadius: "50%",
-      background: highlight ? "rgba(255,255,255,0.08)" : "rgba(74,93,65,0.07)",
-    }} />
-    <div style={{ fontSize: "22px", marginBottom: "8px" }}>{icon}</div>
-    <p style={{
-      fontSize: "12px", fontWeight: "600", letterSpacing: "0.08em",
-      textTransform: "uppercase",
-      color: highlight ? "rgba(255,220,190,0.85)" : "#8a7560",
-      marginBottom: "6px",
-    }}>
-      {label}
-    </p>
-    <p style={{
-      fontSize: "32px", fontWeight: "700", lineHeight: 1,
-      fontFamily: "'Georgia', serif",
-      color: highlight ? "#fff" : "#1a2e1a",
-      marginBottom: "6px",
-    }}>
-      {value}
-    </p>
-    {sub && (
-      <p style={{
-        fontSize: "11px",
-        color: highlight ? "rgba(255,220,190,0.7)" : "#a89070",
-      }}>
-        {sub}
-      </p>
-    )}
-  </div>
-);
+const formatNumber = (value) => Number(value ?? 0).toLocaleString();
+const formatMoney = (value) => `₹${Number(value ?? 0).toLocaleString("en-IN")}`;
 
-const SectionDivider = ({ label }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "8px 0" }}>
-    <div style={{ flex: 1, height: "1px", background: "#e8d9c4" }} />
-    <span style={{ fontSize: "11px", fontWeight: "600", letterSpacing: "0.1em", textTransform: "uppercase", color: "#a89070" }}>
-      {label}
-    </span>
-    <div style={{ flex: 1, height: "1px", background: "#e8d9c4" }} />
-  </div>
-);
+function InfoPill({ label, value, tone = "text-white" }) {
+  return (
+    <div className="min-w-[150px] flex-1 rounded-xl border border-white/10 bg-white/[0.07] px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase text-white/50">{label}</p>
+      <p className={`mt-1 font-display text-2xl font-semibold ${tone}`}>{value}</p>
+    </div>
+  );
+}
 
 export default function AdminDashboard() {
-  const [stats, setStats]     = useState(null);
+  const [stats, setStats] = useState(null);
   const [secStats, setSecStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     setLoading(true);
-    // Fetch admin stats first (required), security stats are optional
-    api.get("/admin/stats")
+    api
+      .get("/admin/stats")
       .then((adminRes) => {
         setStats(adminRes.data);
-        // Try security stats but don't fail if unavailable
         return api.get("/security/stats").catch(() => null);
       })
       .then((secRes) => {
@@ -92,190 +49,131 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  const primaryCards = stats ? [
-    {
-      label: "Total Users",
-      value: Number(stats.users?.total ?? 0).toLocaleString(),
-      sub: stats.users?.new_this_month != null ? `+${stats.users.new_this_month} this month` : null,
-      icon: <Users size={24} />,
-      highlight: false,
-    },
-    {
-      label: "Communities",
-      value: Number(stats.communities?.total ?? 0).toLocaleString(),
-      sub: stats.communities?.verified != null ? `${stats.communities.verified} verified` : null,
-      icon: <Home size={24} />,
-      highlight: false,
-    },
-    {
-      label: "Experiences",
-      value: Number(stats.experiences?.total ?? 0).toLocaleString(),
-      sub: stats.experiences?.active != null ? `${stats.experiences.active} active` : null,
-      icon: <Leaf size={24} />,
-      highlight: false,
-    },
-    {
-      label: "Total Bookings",
-      value: Number(stats.bookings?.total ?? 0).toLocaleString(),
-      sub: stats.bookings?.this_month != null ? `${stats.bookings.this_month} this month` : null,
-      icon: <Calendar size={24} />,
-      highlight: false,
-    },
-  ] : [];
-
-  const revenueCards = stats ? [
-    {
-      label: "Total Revenue",
-      value: "₹" + Number(stats.total_revenue ?? 0).toLocaleString("en-IN"),
-      sub: "from completed bookings",
-      icon: <Coins size={24} />,
-      highlight: false,
-    },
-    {
-      label: "Completed Bookings",
-      value: Number(stats.bookings?.completed ?? 0).toLocaleString(),
-      sub: `${stats.bookings?.cancelled ?? 0} cancelled`,
-      icon: <CheckCircle size={24} />,
-      highlight: false,
-    },
-  ] : [];
-
-  const alertCards = [
-    ...(stats ? [{
-      label: "Pending Verification",
-      value: stats.communities?.pending ?? "0",
-      sub: "communities awaiting review",
-      icon: <Hourglass size={24} />,
-      highlight: (parseInt(stats.communities?.pending) || 0) > 0,
-    }] : []),
-    ...(secStats ? [{
-      label: "Open Reports",
-      value: secStats.open_reports ?? "0",
-      sub: "require attention",
-      icon: <ShieldAlert size={24} />,
-      highlight: (parseInt(secStats.open_reports) || 0) > 0,
-    }, {
-      label: "Suspended Users",
-      value: secStats.suspended_users ?? "0",
-      sub: "accounts on hold",
-      icon: <Lock size={24} />,
-      highlight: false,
-    }] : []),
-  ];
-
   return (
-    <PageShell title="Admin Dashboard" subtitle="Platform health at a glance.">
-      {loading && (
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "40px 0" }}>
-          <div style={{
-            width: "20px", height: "20px", borderRadius: "50%",
-            border: "2px solid #e8d9c4", borderTopColor: "#4a5d41",
-            animation: "spin 0.8s linear infinite",
-          }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <span style={{ fontSize: "14px", color: "#8a7560" }}>Loading dashboard…</span>
-        </div>
-      )}
-
+    <PageShell
+      title="Admin Dashboard"
+      kicker="Control center"
+      subtitle="Platform health, revenue, moderation signals, and review queues at a glance."
+      icon={ShieldCheck}
+    >
       {error && (
-        <div style={{
-          background: "#fef2f2", border: "1px solid #fecaca",
-          borderRadius: "12px", padding: "16px",
-          color: "#dc2626", fontSize: "14px", display: "flex", alignItems: "center", gap: "8px"
-        }}>
-          <AlertTriangle size={18} /> {error}
-        </div>
+        <Card className="mb-6 border-[#EBB8AA] bg-[#FAF0EC]">
+          <div className="flex items-center gap-3 text-sm font-medium text-[#A04D38]">
+            <AlertTriangle size={18} />
+            {error}
+          </div>
+        </Card>
       )}
 
-      {!loading && !error && stats && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Total Users"
+          value={formatNumber(stats?.users?.total)}
+          helper={stats?.users?.new_this_month != null ? `+${stats.users.new_this_month} this month` : "All registered accounts"}
+          icon={Users}
+          tone="river"
+          loading={loading}
+        />
+        <MetricCard
+          label="Communities"
+          value={formatNumber(stats?.communities?.total)}
+          helper={stats?.communities?.verified != null ? `${stats.communities.verified} verified` : "Community profiles"}
+          icon={Home}
+          tone="forest"
+          loading={loading}
+        />
+        <MetricCard
+          label="Experiences"
+          value={formatNumber(stats?.experiences?.total)}
+          helper={stats?.experiences?.active != null ? `${stats.experiences.active} active` : "All listings"}
+          icon={Leaf}
+          tone="amber"
+          loading={loading}
+        />
+        <MetricCard
+          label="Bookings"
+          value={formatNumber(stats?.bookings?.total)}
+          helper={stats?.bookings?.this_month != null ? `${stats.bookings.this_month} this month` : "Total bookings"}
+          icon={Calendar}
+          tone="indigo"
+          loading={loading}
+        />
+      </section>
 
-          {/* Platform Overview */}
-          <div>
-            <SectionDivider label="Platform Overview" />
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: "16px",
-              marginTop: "16px",
-            }}>
-              {primaryCards.map((c) => <StatCard key={c.label} {...c} />)}
-            </div>
-          </div>
-
-          {/* Revenue */}
-          <div>
-            <SectionDivider label="Revenue" />
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: "16px",
-              marginTop: "16px",
-            }}>
-              {revenueCards.map((c) => <StatCard key={c.label} {...c} />)}
-            </div>
-          </div>
-
-          {/* Alerts & Moderation */}
-          {alertCards.length > 0 && (
+      <section className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <Card padding="lg" className="overflow-hidden bg-[#173426] text-white">
+          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div>
-              <SectionDivider label="Alerts & Moderation" />
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                gap: "16px",
-                marginTop: "16px",
-              }}>
-                {alertCards.map((c) => <StatCard key={c.label} {...c} />)}
-              </div>
+              <p className="text-xs font-semibold uppercase text-[#A8CCBA]">Revenue</p>
+              <h2 className="mt-2 font-display text-4xl font-semibold tracking-tight">
+                {loading ? "..." : formatMoney(stats?.total_revenue)}
+              </h2>
+              <p className="mt-2 text-sm text-white/55">From completed bookings across the platform.</p>
             </div>
-          )}
-
-          {/* Quick info bar */}
-          <div style={{
-            background: "linear-gradient(135deg, #1a2e1a 0%, #2d4a2d 100%)",
-            borderRadius: "16px",
-            padding: "20px 28px",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "24px",
-            alignItems: "center",
-          }}>
-            <div style={{ flex: 1, minWidth: "160px" }}>
-              <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>
-                Tourists
-              </p>
-              <p style={{ fontSize: "22px", fontWeight: "700", color: "#fff", fontFamily: "Georgia, serif" }}>
-                {Number(stats.users?.tourists ?? 0).toLocaleString()}
-              </p>
-            </div>
-            <div style={{ flex: 1, minWidth: "160px" }}>
-              <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>
-                Community Owners
-              </p>
-              <p style={{ fontSize: "22px", fontWeight: "700", color: "#fff", fontFamily: "Georgia, serif" }}>
-                {Number(stats.users?.community_owners ?? 0).toLocaleString()}
-              </p>
-            </div>
-            <div style={{ flex: 1, minWidth: "160px" }}>
-              <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>
-                Pending Communities
-              </p>
-              <p style={{ fontSize: "22px", fontWeight: "700", color: "#f97316", fontFamily: "Georgia, serif" }}>
-                {Number(stats.communities?.pending ?? 0).toLocaleString()}
-              </p>
-            </div>
-            <div style={{ flex: 1, minWidth: "160px" }}>
-              <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "4px" }}>
-                Cancelled Bookings
-              </p>
-              <p style={{ fontSize: "22px", fontWeight: "700", color: "#fff", fontFamily: "Georgia, serif" }}>
-                {Number(stats.bookings?.cancelled ?? 0).toLocaleString()}
-              </p>
-            </div>
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#F5C842]">
+              <Coins size={22} />
+            </span>
           </div>
-        </div>
-      )}
+          <div className="mt-7 grid gap-3 sm:grid-cols-2">
+            <InfoPill label="Tourists" value={formatNumber(stats?.users?.tourists)} />
+            <InfoPill label="Community Owners" value={formatNumber(stats?.users?.community_owners)} />
+            <InfoPill label="Pending Communities" value={formatNumber(stats?.communities?.pending)} tone="text-[#F5C842]" />
+            <InfoPill label="Cancelled Bookings" value={formatNumber(stats?.bookings?.cancelled)} />
+          </div>
+        </Card>
+
+        <Card padding="lg">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase text-[#3E7A58]">Attention</p>
+              <h2 className="mt-1 font-display text-2xl font-semibold text-[#1A2820]">Moderation queue</h2>
+            </div>
+            <ShieldAlert size={22} className="text-[#C8883A]" />
+          </div>
+
+          <div className="space-y-3">
+            {[
+              { label: "Pending Verification", value: stats?.communities?.pending, helper: "Communities awaiting review", icon: Hourglass, tone: "bg-[#F5E4CA] text-[#96601F]" },
+              { label: "Open Reports", value: secStats?.open_reports, helper: "Security reports requiring attention", icon: ShieldAlert, tone: "bg-[#FAF0EC] text-[#A04D38]" },
+              { label: "Suspended Users", value: secStats?.suspended_users, helper: "Accounts currently on hold", icon: Lock, tone: "bg-[#E6EAF2] text-[#33415C]" },
+            ].map(({ label, value, helper, icon: Icon, tone }) => (
+              <div key={label} className="flex items-center justify-between gap-4 rounded-xl border border-[#E8E1D5] bg-[#FAF7F2] px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${tone}`}>
+                    <Icon size={17} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-[#1A2820]">{label}</p>
+                    <p className="text-xs text-[#7A9285]">{helper}</p>
+                  </div>
+                </div>
+                <p className="font-display text-2xl font-semibold text-[#1A2820]">
+                  {loading && !stats ? "..." : formatNumber(value)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </section>
+
+      <section className="mt-5 grid gap-4 sm:grid-cols-2">
+        <MetricCard
+          label="Completed Bookings"
+          value={formatNumber(stats?.bookings?.completed)}
+          helper={`${formatNumber(stats?.bookings?.cancelled)} cancelled`}
+          icon={CheckCircle}
+          tone="forest"
+          loading={loading}
+        />
+        <MetricCard
+          label="Security Snapshot"
+          value={secStats ? `${formatNumber(secStats.open_reports)} open` : "Optional"}
+          helper={secStats ? "Security service connected" : "Security stats unavailable or still loading"}
+          icon={ShieldCheck}
+          tone={secStats ? "river" : "indigo"}
+          loading={loading && !secStats}
+        />
+      </section>
     </PageShell>
   );
 }

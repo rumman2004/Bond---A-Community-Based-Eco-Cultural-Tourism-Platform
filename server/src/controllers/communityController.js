@@ -4,6 +4,34 @@ import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
+const attachCommunityImages = async (communities) => {
+  if (!communities?.length) return communities;
+  try {
+    const ids = communities.map((community) => community.id);
+    const imagesResult = await query(
+      `SELECT id, community_id, image_url, image_public_id, caption, sort_order, is_primary, created_at
+       FROM community_images
+       WHERE community_id = ANY($1)
+       ORDER BY is_primary DESC, sort_order ASC, created_at ASC`,
+      [ids]
+    );
+    const byCommunity = new Map();
+    imagesResult.rows.forEach((image) => {
+      if (!byCommunity.has(image.community_id)) byCommunity.set(image.community_id, []);
+      byCommunity.get(image.community_id).push(image);
+    });
+    communities.forEach((community) => {
+      community.images = byCommunity.get(community.id) || [];
+    });
+  } catch (err) {
+    if (err.code !== '42P01') throw err;
+    communities.forEach((community) => {
+      community.images = [];
+    });
+  }
+  return communities;
+};
+
 // ─── Get all verified communities (public, explore page) ─────
 export const getCommunities = asyncHandler(async (req, res) => {
   const {
@@ -58,6 +86,7 @@ export const getCommunities = asyncHandler(async (req, res) => {
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
     params
   );
+  await attachCommunityImages(result.rows);
 
   res.setHeader('X-Total-Count', total);
   res.json(new ApiResponse(200, {
@@ -98,6 +127,43 @@ export const getCommunityBySlug = asyncHandler(async (req, res) => {
 
   community.tags = tagsResult.rows;
 
+  // Also fetch members + offerings (public-safe data for community profile)
+  const [membersResult, offeringsResult] = await Promise.all([
+    query(
+      `SELECT id, full_name, phone, role, is_owner
+       FROM community_members WHERE community_id = $1
+       ORDER BY is_owner DESC, created_at ASC`,
+      [community.id]
+    ).catch(() => ({ rows: [] })),
+    query(
+      `SELECT * FROM community_offerings
+       WHERE community_id = $1 AND is_active = true
+       ORDER BY sort_order ASC`,
+      [community.id]
+    ).catch(() => ({ rows: [] })),
+  ]);
+
+  community.members = membersResult.rows;
+
+  // Attach images to each offering
+  const offerings = offeringsResult.rows;
+  if (offerings.length > 0) {
+    const offeringIds = offerings.map((o) => o.id);
+    const imagesResult = await query(
+      'SELECT * FROM community_offering_images WHERE offering_id = ANY($1) ORDER BY sort_order ASC',
+      [offeringIds]
+    ).catch(() => ({ rows: [] }));
+    const imagesByOffering = {};
+    imagesResult.rows.forEach((img) => {
+      if (!imagesByOffering[img.offering_id]) imagesByOffering[img.offering_id] = [];
+      imagesByOffering[img.offering_id].push(img);
+    });
+    offerings.forEach((o) => { o.images = imagesByOffering[o.id] || []; });
+  }
+  community.offerings = offerings;
+
+  await attachCommunityImages([community]);
+
   res.json(new ApiResponse(200, { community }));
 });
 
@@ -125,6 +191,7 @@ export const getOwnCommunity = asyncHandler(async (req, res) => {
   );
 
   community.tags = tagsResult.rows;
+  await attachCommunityImages([community]);
 
   res.json(new ApiResponse(200, { community }));
 });
@@ -240,6 +307,68 @@ export const updateCoverImage = asyncHandler(async (req, res) => {
   res.json(new ApiResponse(200, { community: result.rows[0] }, 'Cover image updated'));
 });
 
+// ─── Upload multiple community cover/gallery images ──────────
+export const uploadCommunityImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!req.files?.length) throw new ApiError(400, 'No images provided');
+
+  const check = await query(
+    'SELECT user_id FROM communities WHERE id = $1',
+    [id]
+  );
+  if (!check.rows[0]) throw new ApiError(404, 'Community not found');
+  if (check.rows[0].user_id !== req.user.id) throw new ApiError(403, 'Not authorized');
+
+  const existingResult = await query(
+    'SELECT COUNT(*) FROM community_images WHERE community_id = $1',
+    [id]
+  );
+  const existing = Number(existingResult.rows[0]?.count || 0);
+  if (existing + req.files.length > 5) {
+    throw new ApiError(400, `Maximum 5 community images allowed (already has ${existing})`);
+  }
+
+  const uploads = await Promise.all(
+    req.files.map((file) =>
+      uploadToCloudinary(file.buffer, 'communities/covers', {
+        transformation: [{ width: 1200, height: 630, crop: 'fill' }],
+      })
+    )
+  );
+
+  const insertedImages = [];
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    for (let i = 0; i < uploads.length; i += 1) {
+      const isPrimary = existing === 0 && i === 0;
+      const imageResult = await client.query(
+        `INSERT INTO community_images
+           (community_id, image_url, image_public_id, caption, sort_order, is_primary)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING *`,
+        [id, uploads[i].secure_url, uploads[i].public_id, req.body.caption || null, existing + i, isPrimary]
+      );
+      insertedImages.push(imageResult.rows[0]);
+    }
+
+    await client.query(
+      `UPDATE communities
+       SET cover_image_url = COALESCE(cover_image_url, $1)
+       WHERE id = $2`,
+      [uploads[0].secure_url, id]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  res.status(201).json(new ApiResponse(201, { images: insertedImages }, 'Community images uploaded'));
+});
+
 // ─── Update sustainability tags ──────────────────────────────
 export const updateSustainabilityTags = asyncHandler(async (req, res) => {
   const { id }      = req.params;
@@ -285,13 +414,18 @@ export const getCommunityStats = asyncHandler(async (req, res) => {
   const { id: communityId, slug, name, status } = communityResult.rows[0];
 
   const [statsResult, bookingsResult] = await Promise.all([
+    // Inline query replacing the missing booking_summary_current_month view
     query(
-      `SELECT 
-         (SELECT COUNT(*) FROM bookings WHERE community_id = $1) AS total_bookings,
-         (SELECT COALESCE(SUM(total_amount), 0) FROM bookings WHERE community_id = $1 AND status != 'cancelled') AS total_revenue,
-         (SELECT COUNT(*) FROM experiences WHERE community_id = $1) AS total_experiences,
-         (SELECT COALESCE(AVG(rating), 0) FROM reviews WHERE community_id = $1) AS avg_rating,
-         (SELECT COUNT(*) FROM reviews WHERE community_id = $1) AS total_reviews`,
+      `SELECT
+         COUNT(*)                                            AS total_bookings,
+         COALESCE(SUM(total_amount), 0)                     AS total_revenue,
+         COALESCE(SUM(num_guests), 0)                       AS total_guests,
+         COUNT(*) FILTER (WHERE status = 'confirmed')       AS confirmed_bookings,
+         COUNT(*) FILTER (WHERE status = 'pending')         AS pending_bookings,
+         COUNT(*) FILTER (WHERE status = 'cancelled')       AS cancelled_bookings
+       FROM bookings
+       WHERE community_id = $1
+         AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW())`,
       [communityId]
     ),
     query(
@@ -313,7 +447,7 @@ export const getCommunityStats = asyncHandler(async (req, res) => {
     slug,
     name,
     status,
-    ...(statsResult.rows[0] || {}),
+    stats:          statsResult.rows[0] || {},
     recentBookings: bookingsResult.rows,
   }));
 });

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import {
   MapPin, Star, Clock, Users, Leaf, Calendar, ChevronLeft,
@@ -62,6 +62,7 @@ function Skeleton({ className = "" }) {
 export default function ExperienceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [exp, setExp]           = useState(null);
   const [reviews, setReviews]   = useState([]);
@@ -94,16 +95,16 @@ export default function ExperienceDetails() {
         if (!raw) throw new Error("Experience not found");
 
         const images = [
+          ...(raw.images || []).map((image) => image.image_url).filter(Boolean),
           raw.cover_image_url,
-          "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&q=80",
-          "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=80",
         ].filter(Boolean);
 
         setExp({
           id: raw.id,
+          slug: raw.slug,
           name: raw.title,
           community: raw.community_name || "Community",
-          communityId: raw.community_id,
+          communityId: raw.community_slug || raw.community_id,
           location: [raw.village, raw.state].filter(Boolean).join(", ") || "Northeast India",
           rating: parseFloat(raw.avg_rating) || 4.5,
           reviews: raw.review_count || 0,
@@ -129,22 +130,21 @@ export default function ExperienceDetails() {
   }, [id]);
 
   const handleSave = async () => {
-    setSavingFav(true);
-    try {
-      if (saved) {
-        await userService.removeFavorite("experience", exp.id);
-        setSaved(false);
-      } else {
-        await userService.addFavorite({ targetType: "experience", targetId: exp.id });
-        setSaved(true);
-      }
-    } catch {
-      // If unauthenticated, just toggle visually
-      setSaved(!saved);
-    } finally {
-      setSavingFav(false);
+  setSavingFav(true);
+  try {
+    if (saved) {
+      await userService.removeFavorite("experience", exp.id);
+      setSaved(false);
+    } else {
+      await userService.addFavorite({ target_type: "experience", target_id: exp.id });
+      setSaved(true);
     }
-  };
+  } catch {
+    setSaved(!saved);
+  } finally {
+    setSavingFav(false);
+  }
+};
 
   const handleShare = () => {
     if (navigator.share) {
@@ -197,6 +197,8 @@ export default function ExperienceDetails() {
   }
 
   const total = exp.price * guests;
+  const inTouristArea = location.pathname.startsWith("/tourist");
+  const communityPath = `${inTouristArea ? "/tourist" : ""}/community/${exp.communityId}`;
 
   return (
     <div style={{ background: "var(--color-cream)", minHeight: "100vh" }}>
@@ -217,29 +219,41 @@ export default function ExperienceDetails() {
         <div ref={heroRef} className="grid grid-cols-3 gap-3 rounded-3xl overflow-hidden h-80 md:h-96">
           {/* Main image */}
           <div className="col-span-2 relative overflow-hidden">
-            <img
-              src={exp.images[activeImg]}
-              alt={exp.name}
-              className="w-full h-full object-cover transition-all duration-500"
-            />
-            <button
-              onClick={() => setActiveImg((p) => (p - 1 + exp.images.length) % exp.images.length)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
-              style={{ background: "rgba(255,255,255,0.92)" }}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              onClick={() => setActiveImg((p) => (p + 1) % exp.images.length)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
-              style={{ background: "rgba(255,255,255,0.92)" }}
-            >
-              <ChevronRight size={18} />
-            </button>
+            {exp.images.length ? (
+              <>
+                <img
+                  src={exp.images[activeImg]}
+                  alt={exp.name}
+                  className="w-full h-full object-cover transition-all duration-500"
+                />
+                {exp.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setActiveImg((p) => (p - 1 + exp.images.length) % exp.images.length)}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
+                      style={{ background: "rgba(255,255,255,0.92)" }}
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <button
+                      onClick={() => setActiveImg((p) => (p + 1) % exp.images.length)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
+                      style={{ background: "rgba(255,255,255,0.92)" }}
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-[#D4E6DC] text-[#3E7A58]">
+                <Leaf size={54} />
+              </div>
+            )}
           </div>
           {/* Thumbnails */}
           <div className="flex flex-col gap-3">
-            {exp.images.slice(1, 3).map((img, i) => (
+            {(exp.images.length ? exp.images.slice(1, 3) : []).map((img, i) => (
               <div
                 key={i}
                 className="flex-1 overflow-hidden cursor-pointer"
@@ -312,7 +326,7 @@ export default function ExperienceDetails() {
               <p className="text-sm" style={{ color: "var(--color-text-muted)" }}>
                 By{" "}
                 <button
-                  onClick={() => navigate(`/community/${exp.communityId}`)}
+                  onClick={() => navigate(communityPath)}
                   className="font-medium underline-offset-2 hover:underline"
                   style={{ color: "var(--color-forest)" }}
                 >

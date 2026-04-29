@@ -54,10 +54,10 @@ export const countCommunities = ({ state, tag, search }) => {
   return query(`SELECT COUNT(*) FROM communities WHERE ${filters.join(' AND ')}`, params);
 };
 
-// FIX: Was u.full_name — standardised to u.name to match all controller queries
+// Users store display names in full_name.
 export const findCommunityBySlug = (slug) =>
   query(
-    `SELECT c.*, u.name AS owner_name, u.avatar_url AS owner_avatar
+    `SELECT c.*, u.full_name AS owner_name, u.avatar_url AS owner_avatar
      FROM communities c
      JOIN users u ON u.id = c.user_id
      WHERE c.slug = $1 AND c.status = 'verified'`,
@@ -193,10 +193,10 @@ export const getCommunityTags = (community_id) =>
 
 // ─── Verification (security team) ────────────────────────────
 
-// FIX: Was u.full_name — standardised to u.name to match controllers
+// Users store display names in full_name.
 export const findPendingCommunities = () =>
   query(
-    `SELECT c.*, u.name AS owner_name, u.email AS owner_email, u.phone AS owner_phone
+    `SELECT c.*, u.full_name AS owner_name, u.email AS owner_email, u.phone AS owner_phone
      FROM communities c
      JOIN users u ON u.id = c.user_id
      WHERE c.status = 'pending'
@@ -235,11 +235,11 @@ export const getCommunityStats = (community_id) =>
     [community_id]
   );
 
-// FIX: Was u.full_name — standardised to u.name to match controllers
+// Users store display names in full_name.
 export const getCommunityRecentBookings = (community_id) =>
   query(
     `SELECT b.id, b.booking_date, b.num_guests, b.total_amount, b.status,
-            u.name AS tourist_name, u.avatar_url AS tourist_avatar,
+            u.full_name AS tourist_name, u.avatar_url AS tourist_avatar,
             e.title AS experience_title
      FROM bookings b
      JOIN users u ON u.id = b.tourist_id

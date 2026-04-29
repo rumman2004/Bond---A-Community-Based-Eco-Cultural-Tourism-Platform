@@ -99,11 +99,43 @@ export const updateInterests = asyncHandler(async (req, res) => {
 
 // ─── Get favorites ───────────────────────────────────────────
 export const getFavorites = asyncHandler(async (req, res) => {
-  const { type } = req.query; // 'experience' | 'community'
+  const { type } = req.query;
 
   let sql = `
-    SELECT f.id, f.target_type, f.target_id, f.created_at
+    SELECT
+      f.id,
+      f.target_type,
+      f.target_id,
+      f.created_at,
+      CASE
+        WHEN f.target_type = 'experience' THEN e.slug
+        WHEN f.target_type = 'community'  THEN c.slug
+      END AS slug,
+      CASE
+        WHEN f.target_type = 'experience' THEN e.title
+        WHEN f.target_type = 'community'  THEN c.name
+      END AS name,
+      CASE
+        WHEN f.target_type = 'experience' THEN e.meeting_point
+        WHEN f.target_type = 'community'  THEN c.village
+      END AS location,
+      CASE
+        WHEN f.target_type = 'experience' THEN e.short_description
+        WHEN f.target_type = 'community'  THEN c.short_description
+      END AS description,
+      CASE
+        WHEN f.target_type = 'experience' THEN e.avg_rating::text
+        WHEN f.target_type = 'community'  THEN c.avg_rating::text
+      END AS rating,
+      CASE
+        WHEN f.target_type = 'experience' THEN e.cover_image_url
+        WHEN f.target_type = 'community'  THEN c.cover_image_url
+      END AS cover_image_url
     FROM favorites f
+    LEFT JOIN experiences e
+      ON f.target_type = 'experience' AND f.target_id = e.id
+    LEFT JOIN communities c
+      ON f.target_type = 'community'  AND f.target_id = c.id
     WHERE f.user_id = $1
   `;
   const params = [req.user.id];

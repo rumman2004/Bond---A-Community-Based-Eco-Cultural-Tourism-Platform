@@ -14,6 +14,7 @@ import TouristRoutes from './TouristRoutes';
 import CommunityRoutes from './CommunityRoutes';
 import SecurityRoutes from './SecurityRoutes';
 import AdminRoutes from './AdminRoutes';
+import StoryView from '../components/common/StoryView';
 
 const AppRoutes = () => {
   return (
@@ -24,6 +25,7 @@ const AppRoutes = () => {
         <Route path="/explore" element={<Explore />} />
         <Route path="/community/:id" element={<CommunityDetails />} />
         <Route path="/experience/:id" element={<ExperienceDetails />} />
+        <Route path="/story/:id" element={<StoryView />} />
         <Route path="/auth/login" element={<Login />} />
         <Route path="/auth/register" element={<Register />} />
         <Route path="/auth/forgot-password" element={<ForgotPassword />} />

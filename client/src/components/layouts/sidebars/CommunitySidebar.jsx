@@ -8,6 +8,7 @@ import {
   BookOpenText,
   DollarSign,
   User,
+  ShieldCheck,
   ChevronRight,
 } from "lucide-react";
 
@@ -17,6 +18,12 @@ const NAV_ITEMS = [
     links: [
       { icon: LayoutDashboard, label: "Dashboard", to: "/community" },
       { icon: User, label: "Profile Setup", to: "/community/profile" },
+    ],
+  },
+  {
+    group: "Verification",
+    links: [
+      { icon: ShieldCheck, label: "Registration", to: "/community/register" },
     ],
   },
   {
@@ -152,17 +159,17 @@ export default function CommunitySidebar({ collapsed = false }) {
           }}
         >
           <p className="text-xs font-semibold mb-1" style={{ color: "var(--color-forest)" }}>
-            Complete your profile
+            🛡️ Verify your community
           </p>
           <p className="text-xs leading-relaxed mb-2.5" style={{ color: "var(--color-text-mid)" }}>
-            Add photos and sustainability tags to attract more tourists.
+            Add team members, upload ID documents, list your offerings and accept T&C to go live.
           </p>
           <NavLink
-            to="/community/profile"
+            to="/community/register"
             className="text-xs font-semibold underline"
             style={{ color: "var(--color-forest-light)" }}
           >
-            Go to profile →
+            Start verification →
           </NavLink>
         </div>
       )}
