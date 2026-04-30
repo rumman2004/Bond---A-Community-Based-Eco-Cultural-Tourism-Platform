@@ -4,6 +4,7 @@ import PublicLayout from '../components/layouts/PublicLayout';
 import Home from '../pages/public/Home';
 import About from '../pages/public/About';
 import Explore from '../components/common/Explore';
+import Stories from '../components/common/Stories';
 import CommunityDetails from '../components/common/CommunityDetails';
 import ExperienceDetails from '../components/common//ExperienceDetails';
 import NotFound from '../pages/public/NotFound';
@@ -25,6 +26,7 @@ const AppRoutes = () => {
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
         <Route path="/explore" element={<Explore />} />
+        <Route path="/stories" element={<Stories />} />
         <Route path="/community/:id" element={<CommunityDetails />} />
         <Route path="/experience/:id" element={<ExperienceDetails />} />
         <Route path="/story/:id" element={<StoryView />} />

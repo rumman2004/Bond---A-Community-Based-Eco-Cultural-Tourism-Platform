@@ -21,9 +21,12 @@ export default function AuthShell({
         <div className="absolute bottom-16 right-10 h-28 w-px bg-[#8BC4A4]/30" />
 
         <Link to="/" className="relative z-10 inline-flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
-            <Map size={18} strokeWidth={1.9} />
-          </span>
+            <img
+            src="/logo.png"
+            alt="Bond Logo"
+            className="h-10 w-10 object-contain transition-transform duration-200 group-hover:scale-105"
+          />
+          
           <span className="font-display text-xl font-semibold tracking-tight">Bond.</span>
         </Link>
 

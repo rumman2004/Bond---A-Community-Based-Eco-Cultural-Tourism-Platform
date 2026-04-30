@@ -18,6 +18,7 @@ import { useAuth } from "../../../context/AuthContext";
 const NAV_LINKS = [
   { to: "/tourist", label: "Home", end: true },
   { to: "/tourist/explore", label: "Explore", end: false },
+  { to: "/tourist/stories", label: "Stories", end: false },
   { to: "/tourist/bookings", label: "Bookings", end: false },
 ];
 

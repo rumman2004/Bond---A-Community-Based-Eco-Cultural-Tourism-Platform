@@ -7,6 +7,7 @@ import MyBookings from "../pages/tourist/MyBookings";
 import Favorites from "../pages/tourist/Favorites";
 import Interests from "../pages/tourist/Interests";
 import Explore from "../components/common/Explore";
+import Stories from "../components/common/Stories";
 import CommunityDetails from "../components/common/CommunityDetails";
 import ExperienceDetails from "../components/common/ExperienceDetails";
 import StoryView from "../components/common/StoryView";
@@ -21,6 +22,7 @@ export default function TouristRoutes() {
       <Route path="favorites" element={<Favorites />} />
       <Route path="interests" element={<Interests />} />
       <Route path="explore" element={<Explore />} />
+      <Route path="stories" element={<Stories />} />
       <Route path="community/:id" element={<CommunityDetails />} />
       <Route path="experience/:id" element={<ExperienceDetails />} />
       <Route path="story/:id" element={<StoryView />} />
