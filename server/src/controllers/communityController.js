@@ -268,16 +268,18 @@ export const updateCommunity = asyncHandler(async (req, res) => {
        state             = COALESCE($6,  state),
        country           = COALESCE($7,  country),
        pincode           = COALESCE($8,  pincode),
-       latitude          = COALESCE($9,  latitude),
-       longitude         = COALESCE($10, longitude),
-       languages_spoken  = COALESCE($11, languages_spoken),
+       latitude          = COALESCE($9::numeric, latitude),
+       longitude         = COALESCE($10::numeric, longitude),
+       languages_spoken  = COALESCE($11::text[], languages_spoken),
        best_visit_season = COALESCE($12, best_visit_season)
      WHERE id = $13
      RETURNING *`,
     [
       name, description, short_description,
       village, district, state, country,
-      pincode, latitude, longitude,
+      pincode, 
+      latitude === "" ? null : latitude, 
+      longitude === "" ? null : longitude,
       languages_spoken, best_visit_season,
       id,
     ]
@@ -376,6 +378,63 @@ export const uploadCommunityImages = asyncHandler(async (req, res) => {
   }
 
   res.status(201).json(new ApiResponse(201, { images: insertedImages }, 'Community images uploaded'));
+});
+
+// ─── Delete community image ──────────────────────────────────
+export const deleteCommunityImage = asyncHandler(async (req, res) => {
+  const { id, imageId } = req.params;
+
+  const check = await query(
+    'SELECT user_id, cover_image_url FROM communities WHERE id = $1',
+    [id]
+  );
+  if (!check.rows[0]) throw new ApiError(404, 'Community not found');
+  if (check.rows[0].user_id !== req.user.id) throw new ApiError(403, 'Not authorized');
+
+  const imageResult = await query(
+    'SELECT * FROM community_images WHERE id = $1 AND community_id = $2',
+    [imageId, id]
+  );
+  if (!imageResult.rows[0]) throw new ApiError(404, 'Image not found');
+
+  const image = imageResult.rows[0];
+
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    await client.query('DELETE FROM community_images WHERE id = $1', [imageId]);
+
+    // Always recalculate cover_image_url to ensure we never leave orphaned strings
+    const nextImage = await client.query(
+      'SELECT image_url FROM community_images WHERE community_id = $1 ORDER BY is_primary DESC, sort_order ASC, created_at ASC LIMIT 1',
+      [id]
+    );
+    
+    const newCoverUrl = nextImage.rows[0] ? nextImage.rows[0].image_url : null;
+    
+    await client.query(
+      'UPDATE communities SET cover_image_url = $1 WHERE id = $2',
+      [newCoverUrl, id]
+    );
+    
+    if (nextImage.rows[0]) {
+        await client.query('UPDATE community_images SET is_primary = true WHERE image_url = $1', [newCoverUrl]);
+    }
+
+    await client.query('COMMIT');
+    
+    if (image.image_public_id) {
+      await deleteFromCloudinary(image.image_public_id).catch(() => {});
+    }
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  res.json(new ApiResponse(200, null, 'Image deleted successfully'));
 });
 
 // ─── Update sustainability tags ──────────────────────────────

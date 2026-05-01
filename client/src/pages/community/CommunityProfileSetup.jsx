@@ -149,7 +149,7 @@ function SustainabilityTagPicker({ selectedIds, onChange }) {
   );
 }
 
-function CoverUploader({ communityId, currentUrl, currentImages = [], onUploaded, onImagesUploaded }) {
+function CoverUploader({ communityId, currentUrl, currentImages = [], onUploaded, onImagesChange }) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(currentUrl || "");
   const [gallery, setGallery] = useState(currentImages);
@@ -173,8 +173,9 @@ function CoverUploader({ communityId, currentUrl, currentImages = [], onUploaded
         const firstUrl = images[0]?.image_url;
         if (firstUrl) onUploaded(firstUrl);
         if (images.length) {
-          setGallery((prev) => [...images, ...(prev || []).filter((image) => !image.image_url?.startsWith("blob:"))].slice(0, 5));
-          onImagesUploaded?.(images);
+          const newGallery = [...images, ...(gallery || []).filter((image) => !image.image_url?.startsWith("blob:"))].slice(0, 5);
+          setGallery(newGallery);
+          onImagesChange?.(newGallery);
         }
       } else {
         const res = await uploadService.uploadImages(selected, UPLOAD_FOLDERS.COMMUNITY);
@@ -189,6 +190,34 @@ function CoverUploader({ communityId, currentUrl, currentImages = [], onUploaded
     } finally {
       setUploading(false);
       e.target.value = "";
+    }
+  };
+
+  const handleDelete = async (e, imageId) => {
+    e.stopPropagation();
+    if (!communityId || !imageId) return; // Can only delete if saved on server
+    
+    const previousGallery = [...gallery];
+    const newGallery = gallery.filter((img) => img.id !== imageId);
+    setGallery(newGallery);
+    if (newGallery.length > 0) {
+      setPreview(newGallery[0].image_url);
+      onUploaded(newGallery[0].image_url);
+    } else {
+      setPreview("");
+      onUploaded("");
+    }
+    
+    try {
+      await communityService.deleteImage(communityId, imageId);
+      onImagesChange?.(newGallery); 
+    } catch (err) {
+      console.error("Failed to delete image:", err);
+      setGallery(previousGallery);
+      if (previousGallery.length > 0) {
+        setPreview(previousGallery[0].image_url);
+        onUploaded(previousGallery[0].image_url);
+      }
     }
   };
 
@@ -216,12 +245,23 @@ function CoverUploader({ communityId, currentUrl, currentImages = [], onUploaded
       {gallery.length > 0 && (
         <div className="mt-3 grid grid-cols-4 gap-2">
           {gallery.slice(0, 5).map((image, index) => (
-            <img
-              key={`${image.id || image.image_url}-${index}`}
-              src={image.image_url}
-              alt={`Community cover ${index + 1}`}
-              className="h-16 w-full rounded-xl object-cover"
-            />
+            <div key={`${image.id || image.image_url}-${index}`} className="relative group">
+              <img
+                src={image.image_url}
+                alt={`Community cover ${index + 1}`}
+                className="h-16 w-full rounded-xl object-cover border border-[#E8E1D5]"
+              />
+              {image.id && (
+                <button
+                  type="button"
+                  onClick={(e) => handleDelete(e, image.id)}
+                  className="absolute -top-1.5 -right-1.5 rounded-full bg-white text-[#991B1B] border border-[#FEE2E2] shadow-sm p-1 opacity-0 group-hover:opacity-100 transition-all hover:bg-[#FEE2E2]"
+                  title="Delete image"
+                >
+                  <X size={10} strokeWidth={3} />
+                </button>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -434,7 +474,7 @@ function EditForm({ form, setForm, languages, setLanguages, tagIds, setTagIds, c
         currentUrl={coverUrl}
         currentImages={coverImages}
         onUploaded={setCoverUrl}
-        onImagesUploaded={(images) => setCoverImages((prev) => [...images, ...(prev || [])].slice(0, 5))}
+        onImagesChange={setCoverImages}
       />
 
       {/* Identity */}

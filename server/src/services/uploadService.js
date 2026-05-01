@@ -33,7 +33,7 @@ const uploadBuffer = (buffer, folder, options = {}) => {
       {
         folder,
         resource_type: "auto",
-        allowed_formats: ["jpg", "jpeg", "png", "webp", "gif"],
+        allowed_formats: ["jpg", "jpeg", "png", "webp", "gif", "avif"],
         max_bytes: 5 * 1024 * 1024, // 5 MB
         ...options,
       },

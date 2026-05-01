@@ -26,7 +26,7 @@ const pool = new Pool({
   max:                     10,
   min:                     0,
   idleTimeoutMillis:       10_000,   // Release idle clients faster (Supabase kills them at ~30s)
-  connectionTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 30_000,
   allowExitOnIdle:         false,
   // TCP keepalive — prevents Supabase/cloud providers from terminating idle connections
   keepAlive:               true,

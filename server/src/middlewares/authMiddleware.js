@@ -29,7 +29,7 @@ export const protect = asyncHandler(async (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
 
-  // 2. Verify signature + expiry — throws ApiError(401) if invalid
+  
   const decoded = verifyAccessToken(token);
 
   // 3. Re-fetch user from DB so suspended/banned status is live

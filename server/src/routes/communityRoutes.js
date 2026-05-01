@@ -7,6 +7,7 @@ import {
   updateCommunity,
   updateCoverImage,
   uploadCommunityImages,
+  deleteCommunityImage,
   updateSustainabilityTags,
   getCommunityStats,
 } from '../controllers/communityController.js';
@@ -93,6 +94,13 @@ router.post(
   authorize('community'),
   handleUpload(uploadMultiple),
   uploadCommunityImages
+);
+
+router.delete(
+  '/:id/images/:imageId',
+  authenticate,
+  authorize('community'),
+  deleteCommunityImage
 );
 
 router.patch(

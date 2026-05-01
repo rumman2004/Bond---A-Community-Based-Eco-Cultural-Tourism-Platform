@@ -13,6 +13,7 @@ const communityService = {
   update:      (id, payload)        => api.patch(`/communities/${id}`, payload),
   updateCover: (id, formData)       => api.patch(`/communities/${id}/cover`, formData),
   uploadImages: (id, formData)      => api.post(`/communities/${id}/images`, formData),
+  deleteImage:  (id, imageId)       => api.delete(`/communities/${id}/images/${imageId}`),
   updateTags:  (id, tag_ids)        => api.patch(`/communities/${id}/tags`, { tag_ids }),
 
   // ── Verification wizard ────────────────────────────────────

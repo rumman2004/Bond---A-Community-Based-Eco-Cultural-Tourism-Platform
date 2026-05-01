@@ -9,7 +9,7 @@ const getCommunityEmailInfo = async (communityId) => {
   const res = await query(
     `SELECT c.name, u.email as owner_email, u.full_name as owner_name 
      FROM communities c 
-     JOIN users u ON u.id = c.owner_id 
+     JOIN users u ON u.id = c.user_id 
      WHERE c.id = $1`,
     [communityId]
   );
@@ -26,7 +26,7 @@ const getReportFullInfo = async (reportId) => {
      FROM reports r
      JOIN users u ON u.id = r.reported_by
      LEFT JOIN communities c ON (r.report_type = 'community' AND c.id = r.target_id)
-     LEFT JOIN users h ON h.id = c.owner_id
+     LEFT JOIN users h ON h.id = c.user_id
      WHERE r.id = $1`,
     [reportId]
   );
@@ -195,18 +195,17 @@ export const assignReport = asyncHandler(async (req, res) => {
 // ─── Resolve report ───────────────────────────────────────────
 export const resolveReport = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { resolution_note, action_taken } = req.body;
+  const { resolution_note } = req.body;
 
   const result = await query(
     `UPDATE reports
      SET status          = 'resolved',
          resolution_note = $1,
-         action_taken    = $2,
          resolved_at     = NOW(),
-         resolved_by     = $3
-     WHERE id = $4
+         resolved_by     = $2
+     WHERE id = $3
      RETURNING *`,
-    [resolution_note ?? null, action_taken ?? null, req.user.id, id]
+    [resolution_note ?? null, req.user.id, id]
   );
 
   if (!result.rows[0]) throw new ApiError(404, 'Report not found');

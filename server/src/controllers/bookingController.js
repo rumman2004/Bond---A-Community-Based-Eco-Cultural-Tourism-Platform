@@ -224,14 +224,14 @@ export const confirmBooking = asyncHandler(async (req, res) => {
 // A community declining a booking is modelled as 'cancelled' with cancelled_by = 'community'.
 export const rejectBooking = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { cancellation_reason } = req.body;
+  const { cancellation_reason } = req.body || {};
   await updateBookingStatus(id, 'cancelled', 'pending', req.user.id, res, cancellation_reason, 'community');
 });
 
 // ─── Cancel booking (tourist or community) ───────────────────
 export const cancelBooking = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { cancellation_reason } = req.body;
+  const { cancellation_reason } = req.body || {};
 
   const result = await query(
     `SELECT b.*,

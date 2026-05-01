@@ -21,7 +21,7 @@ export const uploadToCloudinary = (fileBuffer, folder = 'general', options = {})
       {
         folder:         `bond/${folder}`,
         resource_type:  'image',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'avif'],
         transformation: [{ quality: 'auto:best', fetch_format: 'auto', flags: 'preserve_transparency' }],
         ...options,
       },
