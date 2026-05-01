@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import authService from '../services/authService';
-import { clearAuthStorage, getStoredUser } from '../utils/tokenUtils';
+import { clearAuthStorage, getStoredUser, setStoredUser } from '../utils/tokenUtils';
 
 const AuthContext = createContext();
 
@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
           // Re-validate with server so stale/suspended users are caught
           const freshUser = await authService.getMe();
           setUser(freshUser);
+          setStoredUser(freshUser); // keep localStorage in sync
         }
       } catch {
         // Token invalid / expired — clear everything
@@ -36,6 +37,15 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     const { user } = await authService.login(credentials);
     setUser(user);
+    // Login response only has basic fields — fetch full profile
+    // so fields like phone, bio, city, country are available immediately
+    try {
+      const fullUser = await authService.getMe();
+      setUser(fullUser);
+      setStoredUser(fullUser);
+    } catch {
+      // Non-critical: profile page will still work on next refresh
+    }
     return { user };
   };
 
@@ -43,6 +53,14 @@ export const AuthProvider = ({ children }) => {
   const register = async (payload) => {
     const { user } = await authService.register(payload);
     setUser(user);
+    // Same as login — fetch full profile after registration
+    try {
+      const fullUser = await authService.getMe();
+      setUser(fullUser);
+      setStoredUser(fullUser);
+    } catch {
+      // Non-critical
+    }
     return { user };
   };
 

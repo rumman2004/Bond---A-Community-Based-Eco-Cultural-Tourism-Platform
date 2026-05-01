@@ -19,10 +19,10 @@ import { Card, MetricCard } from "../../components/ui";
 const formatNumber = (value) => Number(value ?? 0).toLocaleString();
 const formatMoney = (value) => `₹${Number(value ?? 0).toLocaleString("en-IN")}`;
 
-function InfoPill({ label, value, tone = "text-white" }) {
+function InfoPill({ label, value, tone = "text-[#1A2820]" }) {
   return (
-    <div className="min-w-[150px] flex-1 rounded-xl border border-white/10 bg-white/[0.07] px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase text-white/50">{label}</p>
+    <div className="min-w-[150px] flex-1 rounded-xl border border-[#E8E1D5] bg-[#F5F0E8] px-4 py-3">
+      <p className="text-[11px] font-semibold uppercase text-[#7A9285]">{label}</p>
       <p className={`mt-1 font-display text-2xl font-semibold ${tone}`}>{value}</p>
     </div>
   );
@@ -101,27 +101,29 @@ export default function AdminDashboard() {
       </section>
 
       <section className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <Card padding="lg" className="overflow-hidden bg-[#173426] text-white">
+        {/* ── Revenue card ── */}
+        <Card padding="lg" className="overflow-hidden">
           <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase text-[#A8CCBA]">Revenue</p>
-              <h2 className="mt-2 font-display text-4xl font-semibold tracking-tight">
+              <p className="text-xs font-semibold uppercase text-[#3E7A58]">Revenue</p>
+              <h2 className="mt-2 font-display text-4xl font-semibold tracking-tight text-[#1A2820]">
                 {loading ? "..." : formatMoney(stats?.total_revenue)}
               </h2>
-              <p className="mt-2 text-sm text-white/55">From completed bookings across the platform.</p>
+              <p className="mt-2 text-sm text-[#7A9285]">From completed bookings across the platform.</p>
             </div>
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#F5C842]">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#173426] text-[#F5C842]">
               <Coins size={22} />
             </span>
           </div>
           <div className="mt-7 grid gap-3 sm:grid-cols-2">
             <InfoPill label="Tourists" value={formatNumber(stats?.users?.tourists)} />
             <InfoPill label="Community Owners" value={formatNumber(stats?.users?.community_owners)} />
-            <InfoPill label="Pending Communities" value={formatNumber(stats?.communities?.pending)} tone="text-[#F5C842]" />
+            <InfoPill label="Pending Communities" value={formatNumber(stats?.communities?.pending)} tone="text-[#C8883A]" />
             <InfoPill label="Cancelled Bookings" value={formatNumber(stats?.bookings?.cancelled)} />
           </div>
         </Card>
 
+        {/* ── Moderation queue ── */}
         <Card padding="lg">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>

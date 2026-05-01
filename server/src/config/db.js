@@ -24,10 +24,13 @@ const poolConfig = env.DB_HOST
 const pool = new Pool({
   ...poolConfig,
   max:                     10,
-  min:                     1,
-  idleTimeoutMillis:       30_000,
+  min:                     0,
+  idleTimeoutMillis:       10_000,   // Release idle clients faster (Supabase kills them at ~30s)
   connectionTimeoutMillis: 10_000,
   allowExitOnIdle:         false,
+  // TCP keepalive — prevents Supabase/cloud providers from terminating idle connections
+  keepAlive:               true,
+  keepAliveInitialDelayMillis: 10_000,
 });
 
 pool.on('connect', () => {

@@ -58,6 +58,13 @@ export const verifyCommunity = asyncHandler(async (req, res) => {
     );
   }
 
+  // Audit log
+  await query(
+    `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, metadata)
+     VALUES ($1, 'community_verified', 'community', $2, $3)`,
+    [req.user.id, id, JSON.stringify({ community_name: result.rows[0].name })]
+  );
+
   res.json(new ApiResponse(200, { community: result.rows[0] }, 'Community verified'));
 });
 
@@ -88,6 +95,13 @@ export const rejectCommunity = asyncHandler(async (req, res) => {
       [ownerResult.rows[0].user_id, `Your community application was not approved: ${rejection_reason}`, id]
     );
   }
+
+  // Audit log
+  await query(
+    `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, metadata)
+     VALUES ($1, 'community_rejected', 'community', $2, $3)`,
+    [req.user.id, id, JSON.stringify({ community_name: result.rows[0].name, rejection_reason })]
+  );
 
   res.json(new ApiResponse(200, { community: result.rows[0] }, 'Community rejected'));
 });
@@ -151,32 +165,42 @@ export const getSuspendedUsers = asyncHandler(async (req, res) => {
 
 // ─── Get security dashboard stats ────────────────────────────
 export const getSecurityStats = asyncHandler(async (req, res) => {
-  const [
-    totalUsers, activeUsers, flaggedUsers, suspendedUsers,
-    totalExps, liveExps, reviewExps, flaggedExps
-  ] = await Promise.all([
-    query("SELECT COUNT(*) FROM users WHERE role NOT IN ('admin','security')"),
-    query("SELECT COUNT(*) FROM users WHERE last_login_at >= NOW() - INTERVAL '24 hours' AND role NOT IN ('admin','security')"),
-    query("SELECT COUNT(*) FROM users WHERE status = 'flagged'"),
-    query("SELECT COUNT(*) FROM users WHERE status IN ('suspended','banned')"),
-    query("SELECT COUNT(*) FROM experiences"),
-    query("SELECT COUNT(*) FROM experiences WHERE status = 'active'"),
-    query("SELECT COUNT(*) FROM experiences WHERE status = 'pending'"),
-    query("SELECT COUNT(*) FROM experiences WHERE status = 'paused'"),
-  ]);
+  // Consolidated into 3 queries instead of 9 to avoid exhausting DB pool
+  const [userStats, expStats, reportStats] = await Promise.all([
+    query(`SELECT
+             COUNT(*)                                                                       AS total,
+             COUNT(*) FILTER (WHERE last_login >= NOW() - INTERVAL '24 hours')             AS active_today,
+             COUNT(*) FILTER (WHERE status = 'pending')                                    AS flagged,
+             COUNT(*) FILTER (WHERE status IN ('suspended','banned'))                      AS suspended
+           FROM users
+           WHERE role NOT IN ('admin','security')`),
+    query(`SELECT
+             COUNT(*)                                        AS total,
+             COUNT(*) FILTER (WHERE status = 'active')      AS live,
+             COUNT(*) FILTER (WHERE status = 'draft')       AS review,
+             COUNT(*) FILTER (WHERE status = 'paused')      AS flagged
+           FROM experiences`),
+    query(`SELECT COUNT(*) AS open FROM reports WHERE status = 'open'`),
+]);
+
+  const u = userStats.rows[0];
+  const e = expStats.rows[0];
 
   res.json(new ApiResponse(200, {
     // User stats
-    total_users:     parseInt(totalUsers.rows[0].count),
-    active_today:    parseInt(activeUsers.rows[0].count),
-    flagged_users:   parseInt(flaggedUsers.rows[0].count),
-    suspended_users: parseInt(suspendedUsers.rows[0].count),
+    total_users:     parseInt(u.total),
+    active_today:    parseInt(u.active_today),
+    flagged_users:   parseInt(u.flagged),
+    suspended_users: parseInt(u.suspended),
     
     // Experience stats
-    total_experiences:   parseInt(totalExps.rows[0].count),
-    live_experiences:    parseInt(liveExps.rows[0].count),
-    review_experiences:  parseInt(reviewExps.rows[0].count),
-    flagged_experiences: parseInt(flaggedExps.rows[0].count),
+    total_experiences:   parseInt(e.total),
+    live_experiences:    parseInt(e.live),
+    review_experiences:  parseInt(e.review),
+    flagged_experiences: parseInt(e.flagged),
+
+    // Report stats
+    open_reports:        parseInt(reportStats.rows[0].open),
   }));
 });
 

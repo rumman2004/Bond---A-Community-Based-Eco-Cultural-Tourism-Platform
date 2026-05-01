@@ -6,7 +6,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 // ─── Platform-wide stats ──────────────────────────────────────
 export const getDashboardStats = asyncHandler(async (req, res) => {
-  const [users, communities, experiences, bookings, revenue] = await Promise.all([
+  const [users, communities, experiences, bookings] = await Promise.all([
     query(`SELECT
              COUNT(*)                                                                AS total,
              COUNT(*) FILTER (WHERE role = 'tourist')                               AS tourists,
@@ -26,11 +26,9 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
              COUNT(*)                                                                 AS total,
              COUNT(*) FILTER (WHERE status = 'completed')                            AS completed,
              COUNT(*) FILTER (WHERE status = 'cancelled')                            AS cancelled,
-             COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')       AS this_month
+             COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days')       AS this_month,
+             COALESCE(SUM(total_amount) FILTER (WHERE status = 'completed'), 0)     AS revenue
            FROM bookings`),
-    query(`SELECT COALESCE(SUM(total_amount), 0) AS total
-           FROM bookings
-           WHERE status = 'completed'`),
   ]);
 
   res.json(new ApiResponse(200, {
@@ -38,7 +36,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     communities:   communities.rows[0],
     experiences:   experiences.rows[0],
     bookings:      bookings.rows[0],
-    total_revenue: revenue.rows[0].total,
+    total_revenue: bookings.rows[0].revenue,
   }));
 });
 

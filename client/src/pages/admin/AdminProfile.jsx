@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle } from "lucide-react";
 import PageShell from "../PageShell";
 import { useAuth } from "../../context/AuthContext";
 import userService from "../../services/userService";
+import { setStoredUser } from "../../utils/tokenUtils";
 
 const C = {
   forest: "#1a2e1a", forestMid: "#2d4a2d", forestLight: "#4a6741",
@@ -94,10 +95,15 @@ export default function AdminProfile() {
     setSuccess(false);
     try {
       const res = await userService.updateProfile(form);
-      setUser((prev) => ({ ...prev, ...res.data?.user }));
+      const updatedUser = res.data?.user;
+      setUser((prev) => {
+        const merged = { ...prev, ...updatedUser };
+        setStoredUser(merged); // keep localStorage in sync
+        return merged;
+      });
       setSuccess(true);
     } catch (err) {
-      setError(err.response?.data?.message ?? "Failed to save profile.");
+      setError(err.message ?? "Failed to save profile.");
     } finally {
       setSaving(false);
     }

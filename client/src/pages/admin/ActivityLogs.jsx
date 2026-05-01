@@ -1,36 +1,58 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, ClipboardList, Settings, RefreshCw, Lock, Unlock, CheckCircle, XCircle, Edit, Pin, ArrowLeft, ArrowRight } from "lucide-react";
+import {
+  AlertTriangle, ClipboardList, Settings, RefreshCw, Lock, Unlock,
+  CheckCircle, XCircle, Edit, Pin, ArrowLeft, ArrowRight, Flag,
+  Eye, EyeOff, ShieldCheck, ShieldX, UserPlus, Home, Trash2,
+} from "lucide-react";
 import PageShell from "../PageShell";
 import api from "../../services/api";
 
 const ACTION_LABELS = {
-  user_status_changed: "User Status Changed",
-  user_role_changed:   "User Role Changed",
-  user_suspended:      "User Suspended",
-  user_unsuspended:    "User Reinstated",
-  community_verified:  "Community Verified",
-  community_rejected:  "Community Rejected",
-  user_profile_updated: "Profile Updated",
+  // User actions
+  user_status_changed:    "User Status Changed",
+  user_role_changed:      "User Role Changed",
+  user_suspended:         "User Suspended",
+  user_unsuspended:       "User Reinstated",
+  user_flagged:           "User Flagged",
+  user_profile_updated:   "Profile Updated",
+  // Community actions
+  community_verified:     "Community Verified",
+  community_rejected:     "Community Rejected",
+  community_suspended:    "Community Suspended",
+  // Experience actions
+  experience_flagged:     "Experience Flagged",
+  experience_approved:    "Experience Approved",
+  experience_suspended:   "Experience Suspended",
 };
 
 const ACTION_ICONS = {
-  user_status_changed:  <Settings size={18} />,
-  user_role_changed:    <RefreshCw size={18} />,
-  user_suspended:       <Lock size={18} />,
-  user_unsuspended:     <Unlock size={18} />,
-  community_verified:   <CheckCircle size={18} />,
-  community_rejected:   <XCircle size={18} />,
-  user_profile_updated: <Edit size={18} />,
+  user_status_changed:    <Settings size={18} />,
+  user_role_changed:      <RefreshCw size={18} />,
+  user_suspended:         <Lock size={18} />,
+  user_unsuspended:       <Unlock size={18} />,
+  user_flagged:           <Flag size={18} />,
+  user_profile_updated:   <Edit size={18} />,
+  community_verified:     <ShieldCheck size={18} />,
+  community_rejected:     <ShieldX size={18} />,
+  community_suspended:    <Lock size={18} />,
+  experience_flagged:     <Flag size={18} />,
+  experience_approved:    <Eye size={18} />,
+  experience_suspended:   <EyeOff size={18} />,
 };
 
 const ACTION_COLORS = {
-  user_status_changed:  { bg: "#eff6ff", border: "#bfdbfe", text: "#1e40af" },
-  user_role_changed:    { bg: "#fdf4ff", border: "#e9d5ff", text: "#7e22ce" },
-  user_suspended:       { bg: "#fff7ed", border: "#fed7aa", text: "#c2410c" },
-  user_unsuspended:     { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
-  community_verified:   { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
-  community_rejected:   { bg: "#fef2f2", border: "#fecaca", text: "#dc2626" },
-  user_profile_updated: { bg: "#f8fafc", border: "#e2e8f0", text: "#475569" },
+  user_status_changed:    { bg: "#eff6ff", border: "#bfdbfe", text: "#1e40af" },
+  user_role_changed:      { bg: "#fdf4ff", border: "#e9d5ff", text: "#7e22ce" },
+  user_suspended:         { bg: "#fff7ed", border: "#fed7aa", text: "#c2410c" },
+  user_unsuspended:       { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
+  user_flagged:           { bg: "#fefce8", border: "#fde68a", text: "#a16207" },
+  user_profile_updated:   { bg: "#f8fafc", border: "#e2e8f0", text: "#475569" },
+  community_verified:     { bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
+  community_rejected:     { bg: "#fef2f2", border: "#fecaca", text: "#dc2626" },
+  community_suspended:    { bg: "#fff7ed", border: "#fed7aa", text: "#c2410c" },
+  experience_flagged:     { bg: "#fefce8", border: "#fde68a", text: "#a16207" },
+  experience_approved:    { bg: "#ecfdf5", border: "#a7f3d0", text: "#047857" },
+  experience_suspended:   { bg: "#fef2f2", border: "#fecaca", text: "#dc2626" },
 };
 
 const DEFAULT_COLOR = { bg: "#f8fafc", border: "#e2e8f0", text: "#475569" };
@@ -48,28 +70,33 @@ function formatRelativeTime(dateStr) {
 }
 
 export default function ActivityLogs() {
-  const [logs, setLogs]       = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
-  const [page, setPage]       = useState(1);
-  const [hasMore, setHasMore] = useState(false);
+  const [logs, setLogs]             = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState(null);
+  const [page, setPage]             = useState(1);
+  const [hasMore, setHasMore]       = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     api.get(`/admin/logs?page=${page}&limit=20`)
       .then((res) => {
         const data = res.data?.logs ?? [];
         setLogs(data);
         setHasMore(data.length === 20);
+        setTotalCount(res.data?.pagination?.total ?? 0);
       })
       .catch(() => setError("Failed to load activity logs."))
       .finally(() => setLoading(false));
   }, [page]);
 
   return (
-    <PageShell title="Activity Logs" subtitle="Audit trail of recent platform events.">
-
-      {/* ── Loading skeleton ─────────────────────────────────────── */}
+    <PageShell
+      title="Activity Logs"
+      subtitle={`Audit trail of recent platform events.${totalCount ? ` ${totalCount.toLocaleString()} total entries.` : ""}`}
+    >
+      {/* ── Loading skeleton ── */}
       {loading && (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <style>{`@keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }`}</style>
@@ -84,7 +111,7 @@ export default function ActivityLogs() {
         </div>
       )}
 
-      {/* ── Error ────────────────────────────────────────────────── */}
+      {/* ── Error ── */}
       {error && (
         <div style={{
           background: "#fef2f2", border: "1px solid #fecaca",
@@ -95,7 +122,7 @@ export default function ActivityLogs() {
         </div>
       )}
 
-      {/* ── Empty ────────────────────────────────────────────────── */}
+      {/* ── Empty ── */}
       {!loading && !error && logs.length === 0 && (
         <div style={{
           textAlign: "center", padding: "80px 20px",
@@ -108,7 +135,7 @@ export default function ActivityLogs() {
         </div>
       )}
 
-      {/* ── Log entries ──────────────────────────────────────────── */}
+      {/* ── Log entries ── */}
       {!loading && !error && logs.length > 0 && (
         <div style={{ position: "relative" }}>
           {/* Timeline line */}
@@ -136,26 +163,29 @@ export default function ActivityLogs() {
                   <div style={{
                     width: "40px", height: "40px", borderRadius: "50%",
                     flexShrink: 0, display: "flex", alignItems: "center",
-                    justifyContent: "center", fontSize: "16px",
+                    justifyContent: "center",
                     background: colors.bg, border: `2px solid ${colors.border}`,
+                    color: colors.text,
                     position: "relative", zIndex: 1,
                   }}>
                     {icon}
                   </div>
 
                   {/* Card */}
-                  <div style={{
-                    flex: 1, background: "#fff",
-                    border: `1px solid #e8d9c4`,
-                    borderRadius: "12px", padding: "12px 16px",
-                    marginBottom: "4px",
-                    transition: "box-shadow 0.15s",
-                  }}
+                  <div
+                    style={{
+                      flex: 1, background: "#fff",
+                      border: "1px solid #e8d9c4",
+                      borderRadius: "12px", padding: "12px 16px",
+                      marginBottom: "4px",
+                      transition: "box-shadow 0.15s",
+                    }}
                     onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.06)"}
                     onMouseLeave={(e) => e.currentTarget.style.boxShadow = "none"}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
                       <div>
+                        {/* Action badge */}
                         <span style={{
                           display: "inline-block",
                           padding: "2px 10px", borderRadius: "999px",
@@ -166,18 +196,39 @@ export default function ActivityLogs() {
                         }}>
                           {label}
                         </span>
-                        {log.actor_name && (
+
+                        {/* Actor */}
+                        {log.actor_name ? (
                           <p style={{ fontSize: "13px", color: "#1a150f" }}>
                             <span style={{ fontWeight: "500" }}>{log.actor_name}</span>
                             <span style={{ color: "#8a7560", fontSize: "12px" }}> · {log.actor_email}</span>
                           </p>
+                        ) : (
+                          <p style={{ fontSize: "13px", color: "#8a7560", fontStyle: "italic" }}>
+                            System / deleted user
+                          </p>
                         )}
+
+                        {/* Target entity */}
                         {log.entity_type && log.entity_id && (
                           <p style={{ fontSize: "11px", color: "#a89070", marginTop: "3px" }}>
-                            Target: {log.entity_type} #{String(log.entity_id).slice(0, 8)}…
+                            Target: <span style={{ fontWeight: "500" }}>{log.entity_type}</span>{" "}
+                            #{String(log.entity_id).slice(0, 8)}…
+                          </p>
+                        )}
+
+                        {/* Metadata preview */}
+                        {log.metadata && Object.keys(log.metadata).length > 0 && (
+                          <p style={{ fontSize: "11px", color: "#bba88a", marginTop: "2px" }}>
+                            {Object.entries(log.metadata)
+                              .filter(([k]) => !["created_by_admin"].includes(k))
+                              .map(([k, v]) => `${k}: ${v}`)
+                              .join(" · ")}
                           </p>
                         )}
                       </div>
+
+                      {/* Timestamp */}
                       <div style={{ textAlign: "right", flexShrink: 0 }}>
                         <p style={{ fontSize: "12px", color: "#8a7560", whiteSpace: "nowrap" }}>
                           {formatRelativeTime(log.created_at)}
@@ -195,7 +246,7 @@ export default function ActivityLogs() {
         </div>
       )}
 
-      {/* ── Pagination ───────────────────────────────────────────── */}
+      {/* ── Pagination ── */}
       {!loading && (logs.length > 0 || page > 1) && (
         <div style={{
           display: "flex", gap: "10px", marginTop: "28px",
@@ -211,9 +262,13 @@ export default function ActivityLogs() {
                 background: "#fffdf8", color: "#5a4a35", cursor: "pointer",
               }}
             >
-              <ArrowLeft size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} /> Previous
+              <ArrowLeft size={16} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} />
+              Previous
             </button>
           )}
+          <span style={{ alignSelf: "center", fontSize: "13px", color: "#8a7560" }}>
+            Page {page}
+          </span>
           {hasMore && (
             <button
               onClick={() => setPage(p => p + 1)}
@@ -223,13 +278,19 @@ export default function ActivityLogs() {
                 background: "#fffdf8", color: "#5a4a35", cursor: "pointer",
               }}
             >
-              Next <ArrowRight size={16} style={{ display: "inline", verticalAlign: "middle", marginLeft: "4px" }} />
+              Next
+              <ArrowRight size={16} style={{ display: "inline", verticalAlign: "middle", marginLeft: "4px" }} />
             </button>
           )}
         </div>
       )}
 
-      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </PageShell>
   );
 }
