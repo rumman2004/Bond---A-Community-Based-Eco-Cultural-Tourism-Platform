@@ -53,6 +53,11 @@ if (env.isDev) {
   }));
 }
 
+// ── Health check ──────────────────────────────────────────────
+app.get('/', (_req, res) => {
+  res.json({ status: 'ok', message: 'Bond API is running 🚀' });
+});
+
 // ── API routes ────────────────────────────────────────────────
 app.use('/api', router);
 
