@@ -107,12 +107,12 @@ const errorHandler = (err, req, res, next) => { // eslint-disable-line no-unused
   }
 
   // ── 6. Unknown / unhandled error ─────────────────────────
-  // Never leak stack traces or internal details in production
+  // TODO: revert message back to 'Internal server error' after debugging
   return res.status(500).json({
     success:    false,
     statusCode: 500,
-    message:    isDev ? err.message : 'Internal server error',
-    ...(isDev && { stack: err.stack }),
+    message:    err.message,   // temporarily exposed for debugging
+    stack:      err.stack,     // temporarily exposed for debugging
   });
 };
 
