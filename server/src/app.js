@@ -22,11 +22,16 @@ import { logger }       from './utils/logger.js';
 const app = express();
 
 // ── Security headers ──────────────────────────────────────────
-app.use(helmet());
+// CORS must come before helmet so preflight OPTIONS responses
+// always include the correct Access-Control-* headers.
 app.use(cors(corsOptions));
-
-// Express 4 compatible preflight — '*' not '/{*path}'
 app.options('/{*path}', cors(corsOptions));
+
+// Helmet — disable CSP since this is a pure JSON REST API (no HTML pages).
+app.use(helmet({
+  contentSecurityPolicy: false,   // API servers don't serve HTML; CSP is irrelevant
+  crossOriginEmbedderPolicy: false,
+}));
 
 // ── Global rate limiter ───────────────────────────────────────
 app.use('/api', apiLimiter);
