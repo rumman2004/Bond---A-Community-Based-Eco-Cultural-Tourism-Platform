@@ -6,7 +6,7 @@ const hasJWT     = process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET;
 const hasRefresh = process.env.JWT_REFRESH_SECRET;
 if (!hasJWT || !hasRefresh) {
   console.error('❌ Missing: JWT_SECRET (or JWT_ACCESS_SECRET) and JWT_REFRESH_SECRET');
-  process.exit(1);
+  if (process.env.NODE_ENV !== 'production') process.exit(1);
 }
 
 // ── DB check ──────────────────────────────────────────────────
@@ -14,7 +14,7 @@ const hasDBVars = process.env.DB_HOST && process.env.DB_USER && process.env.DB_P
 const hasDBUrl  = process.env.DATABASE_URL;
 if (!hasDBVars && !hasDBUrl) {
   console.error('❌ Missing DB config: set DB_HOST + DB_USER + DB_PASSWORD  or  DATABASE_URL');
-  process.exit(1);
+  if (process.env.NODE_ENV !== 'production') process.exit(1);
 }
 
 // ── Required app vars ─────────────────────────────────────────
