@@ -18,12 +18,7 @@ if (!hasDBVars && !hasDBUrl) {
 }
 
 // ── Required app vars ─────────────────────────────────────────
-const required = ['NODE_ENV', 'PORT', 'CLIENT_URL'];
-const missing  = required.filter((k) => !process.env[k]);
-if (missing.length) {
-  console.error('❌ Missing required env vars:\n  ' + missing.join('\n  '));
-  process.exit(1);
-}
+// (Removed PORT, NODE_ENV, CLIENT_URL from required checks since they have fallbacks)
 
 export const env = {
   // App
