@@ -26,12 +26,6 @@ const communityService = {
   saveMembers: (id, members) =>
     api.post(`/communities/${id}/members`, { members }),
 
-  // Step 2B — upload ID bundle PDF
-  // formData must have field name 'document'
-  // Do NOT set Content-Type manually — Axios auto-sets multipart/form-data + boundary
-  uploadDocument: (id, formData) =>
-    api.post(`/communities/${id}/documents`, formData),
-
   // Step 3A — save offerings
   // offerings: [{ category, custom_label?, description? }]
   saveOfferings: (id, offerings) =>

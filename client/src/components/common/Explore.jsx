@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { gsap } from "gsap";
 import {
   Search, MapPin, Star, SlidersHorizontal, X, Leaf,
-  Globe, Grid3X3, List, ChevronDown,
+  Globe, Grid3X3, List,
 } from "lucide-react";
 import experienceService from "../../services/experienceService";
 
@@ -212,7 +212,6 @@ function ExploreCard({ exp, view }) {
 const TAG_COLOR_MAP = { Cultural: "terracotta", Eco: "forest", Adventure: "amber" };
 
 export default function Explore() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery]               = useState(searchParams.get("q") || "");
   const communityId                     = searchParams.get("community");

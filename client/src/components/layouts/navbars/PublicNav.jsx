@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
-import { Compass, LogIn, LogOut, Map, Menu, Sparkles, User, X } from "lucide-react";
+import { Compass, LogIn, LogOut, Menu, User, X } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 
 const NAV_LINKS = [

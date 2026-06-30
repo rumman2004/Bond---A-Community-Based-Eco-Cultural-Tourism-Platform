@@ -421,7 +421,7 @@ export default function ManageUsers() {
             {[
               { label: "Prev", icon: <ArrowLeft size={16} style={{ marginRight: "4px" }} />, disabled: page === 1,          action: () => setPage(p => p - 1) },
               { label: "Next", icon: <ArrowRight size={16} style={{ marginLeft: "4px" }} />,  disabled: page >= totalPages,  action: () => setPage(p => p + 1) },
-            ].map(({ label, disabled, action }) => (
+            ].map(({ label, icon, disabled, action }) => (
               <button
                 key={label}
                 disabled={disabled}

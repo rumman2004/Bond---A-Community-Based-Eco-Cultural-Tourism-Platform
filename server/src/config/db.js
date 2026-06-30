@@ -25,12 +25,12 @@ const pool = new Pool({
   ...poolConfig,
   max:                     10,
   min:                     0,
-  idleTimeoutMillis:       10_000,   // Release idle clients faster (Supabase kills them at ~30s)
+  idleTimeoutMillis:       5_000,    // Release idle clients faster (Supabase kills them at ~30s)
   connectionTimeoutMillis: 30_000,
   allowExitOnIdle:         false,
   // TCP keepalive — prevents Supabase/cloud providers from terminating idle connections
   keepAlive:               true,
-  keepAliveInitialDelayMillis: 10_000,
+  keepAliveInitialDelayMillis: 5_000,
 });
 
 pool.on('connect', () => {
@@ -43,7 +43,20 @@ pool.on('error', (err) => {
 });
 
 /**
- * Run a single query
+ * Returns true for errors caused by the server dropping the TCP connection
+ * (idle timeout, network blip, provider restart, etc.)
+ */
+const isConnectionError = (err) =>
+  err && (
+    err.message?.includes('Connection terminated unexpectedly') ||
+    err.message?.includes('connection terminated') ||
+    err.message?.includes('Client has encountered a connection error') ||
+    err.code === 'ECONNRESET' ||
+    err.code === 'EPIPE'
+  );
+
+/**
+ * Run a single query — retries once on stale-connection errors.
  */
 export const query = async (text, params) => {
   const start = Date.now();
@@ -52,6 +65,17 @@ export const query = async (text, params) => {
     logger.debug('Query OK (' + (Date.now() - start) + 'ms) rows=' + result.rowCount);
     return result;
   } catch (err) {
+    if (isConnectionError(err)) {
+      logger.warn('Connection lost — retrying query once…');
+      try {
+        const result = await pool.query(text, params);
+        logger.debug('Query OK (retry, ' + (Date.now() - start) + 'ms) rows=' + result.rowCount);
+        return result;
+      } catch (retryErr) {
+        logger.error('Query retry failed: ' + retryErr.message + ' | SQL: ' + text);
+        throw retryErr;
+      }
+    }
     logger.error('Query error: ' + err.message + ' | SQL: ' + text);
     throw err;
   }

@@ -25,30 +25,35 @@ async function request(endpoint, options = {}) {
 
   // Timeout: 90s for file uploads, 30s for everything else
   const timeoutMs = isFormData ? 90_000 : 30_000;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  let response;
-  try {
-    response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-      credentials: "include",
-      signal: controller.signal,
-    });
-  } catch (err) {
-    clearTimeout(timeoutId);
-    if (err.name === "AbortError") {
-      throw new Error(
-        isFormData
-          ? "Upload timed out. Please check your connection and try again."
-          : "Request timed out. Please try again."
-      );
+  // Single fetch wrapped with its own abort/timeout. Used for both the
+  // initial request and the post-token-refresh retry, so neither can hang.
+  const fetchWithTimeout = async (reqHeaders) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers: reqHeaders,
+        credentials: "include",
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err.name === "AbortError") {
+        throw new Error(
+          isFormData
+            ? "Upload timed out. Please check your connection and try again."
+            : "Request timed out. Please try again.",
+          { cause: err }
+        );
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    throw err;
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  };
+
+  const response = await fetchWithTimeout(headers);
 
   if (response.status === 401 && endpoint !== "/auth/refresh-token" && endpoint !== "/auth/login") {
     if (!isRefreshing) {
@@ -92,11 +97,7 @@ async function request(endpoint, options = {}) {
         ...options.headers,
       };
 
-      const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
-        headers: retryHeaders,
-        credentials: "include",
-      });
+      const retryResponse = await fetchWithTimeout(retryHeaders);
 
       const retryContentType = retryResponse.headers.get("content-type") || "";
       const retryData = retryContentType.includes("application/json")

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import {
-  Map,
   Bell,
   ChevronDown,
   LogOut,

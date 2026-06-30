@@ -22,6 +22,12 @@ export const MEMBER_ROLES = [
   "Craft Instructor", "Farmer", "Event Coordinator", "Other",
 ];
 
+// Government ID types accepted for member verification.
+// Must match VALID_ID_TYPES in server communityVerificationValidator.js
+export const ID_TYPES = [
+  "Aadhaar", "PAN", "Passport", "Voter ID", "Driving License",
+];
+
 export const WIZARD_STEPS = [
   { num: 1, label: "Basic Info",    icon: "🏡" },
   { num: 2, label: "Team & IDs",   icon: "👥" },
@@ -33,7 +39,7 @@ export const CONSENT_TEXT = `By submitting this form, I confirm that:
 
 1. All information provided about the community is accurate and truthful.
 2. All team members listed have given their consent to be included in this registration.
-3. The uploaded ID documents are genuine and belong to the listed members.
+3. The ID details and proofs provided are genuine and belong to the listed members.
 4. The community agrees to abide by the platform's community guidelines and code of conduct.
 5. The offering images are original photographs taken by or on behalf of the community.
 6. The community will maintain the quality and standards described in the offerings.

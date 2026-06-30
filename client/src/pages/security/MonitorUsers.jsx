@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { gsap } from "gsap";
 import {
-  Search, Filter, MoreHorizontal, UserCheck, UserX,
-  ShieldAlert, Eye, ChevronDown, RefreshCw, Download,
+  Search, Filter, UserCheck, UserX,
+  ShieldAlert, ChevronDown,
   Users, TrendingUp, AlertOctagon, Clock, MapPin,
-  ArrowUpRight, Loader2,
+  Loader2,
 } from "lucide-react";
 import securityService from "../../services/securityService";
 
@@ -37,7 +37,7 @@ function SkeletonRow() {
 }
 
 /* ── Stat card ── */
-function StatCard({ label, value, delta, icon: Icon, color, loading }) {
+function StatCard({ label, value, icon: Icon, color, loading }) {
   const ref = useRef(null);
   useEffect(() => {
     gsap.fromTo(ref.current,

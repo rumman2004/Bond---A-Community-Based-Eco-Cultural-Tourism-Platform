@@ -4,7 +4,7 @@ import { gsap } from "gsap";
 import {
   MapPin, Star, Users, Leaf, Shield, Calendar, ArrowRight,
   Globe, BookOpen, ChevronLeft, AlertCircle, Heart, Clock,
-  Share2, CheckCircle2, ChevronRight, User, Loader2
+  Share2, CheckCircle2, User, Loader2
 } from "lucide-react";
 import communityService from "../../services/communityService";
 import experienceService from "../../services/experienceService";
@@ -82,7 +82,7 @@ export default function CommunityDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const [community, setCommunity] = useState(null);
   useEffect(() => {
@@ -90,7 +90,6 @@ export default function CommunityDetails() {
   }, [community]);
   const [experiences, setExperiences] = useState([]);
   const [stories, setStories] = useState([]);
-  const [activeImg, setActiveImg] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

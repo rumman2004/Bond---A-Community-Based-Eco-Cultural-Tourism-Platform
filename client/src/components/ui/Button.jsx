@@ -51,7 +51,6 @@ export default function Button({
   ...rest
 }) {
   const btnRef = useRef(null);
-  const rippleRef = useRef(null);
 
   const handleClick = (e) => {
     if (disabled || loading) return;

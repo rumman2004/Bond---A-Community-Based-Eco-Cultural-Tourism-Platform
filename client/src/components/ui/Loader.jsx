@@ -61,11 +61,13 @@ export default function Loader({ variant = "spinner", size = "md", label, color 
 }
 
 function Dots({ color, label }) {
-  const refs = [useRef(null), useRef(null), useRef(null)];
+  const containerRef = useRef(null);
 
   useEffect(() => {
-    refs.forEach((r, i) => {
-      gsap.to(r.current, {
+    const dots = containerRef.current?.children;
+    if (!dots) return;
+    Array.from(dots).forEach((el, i) => {
+      gsap.to(el, {
         y: -5,
         repeat: -1,
         yoyo: true,
@@ -78,11 +80,10 @@ function Dots({ color, label }) {
 
   return (
     <span className="inline-flex flex-col items-center gap-2">
-      <span className="flex items-center gap-1.5">
-        {refs.map((r, i) => (
+      <span ref={containerRef} className="flex items-center gap-1.5">
+        {[0, 1, 2].map((i) => (
           <span
             key={i}
-            ref={r}
             className="block w-2 h-2 rounded-full"
             style={{ background: color }}
           />

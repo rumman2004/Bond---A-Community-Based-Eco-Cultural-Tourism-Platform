@@ -4,7 +4,7 @@ import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
 // Allowed folders per use-case
-const ALLOWED_FOLDERS = ['avatars', 'communities', 'experiences', 'stories', 'reports'];
+const ALLOWED_FOLDERS = ['avatars', 'communities', 'experiences', 'stories', 'reports', 'documents'];
 
 // ─── Upload single image ──────────────────────────────────────
 export const uploadImage = asyncHandler(async (req, res) => {

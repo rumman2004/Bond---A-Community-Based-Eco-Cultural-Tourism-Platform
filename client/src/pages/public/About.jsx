@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Heart, Shield, Leaf, Users, ArrowRight, MapPin } from "lucide-react";
-import { Button, Card } from "../../components/ui";
+import { Button } from "../../components/ui";
 
 gsap.registerPlugin(ScrollTrigger);
 

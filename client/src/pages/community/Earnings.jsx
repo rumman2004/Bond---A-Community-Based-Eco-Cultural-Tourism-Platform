@@ -33,7 +33,7 @@ const STATUS_MAP = {
 };
 
 export default function Earnings() {
-  const [stats,    setStats]    = useState(null);
+  const [, setStats]    = useState(null);
   const [bookings, setBookings] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
@@ -52,7 +52,6 @@ export default function Earnings() {
       .finally(() => setLoading(false));
   }, []);
 
-  const s = stats ?? {};
 
   // Derive payout breakdown from stats or bookings
   // Derive payout breakdown dynamically from local bookings state

@@ -104,10 +104,11 @@ function VerificationBanner({ community, verification }) {
     );
   }
 
-  const membersOk = (verification?.members?.length ?? 0) > 0;
-  const docsOk = (verification?.documents?.length ?? 0) > 0;
+  const memberList = verification?.members ?? [];
+  const membersOk = memberList.length > 0;
+  const idsOk = membersOk && memberList.every((m) => m.id_type && m.id_number && (m.id_image_url || m.id_link));
   const offeringsOk = (verification?.offerings?.length ?? 0) > 0;
-  const stepStatus = { 1: regStep > 1, 2: membersOk && docsOk, 3: offeringsOk, 4: consentDone };
+  const stepStatus = { 1: regStep > 1, 2: membersOk && idsOk, 3: offeringsOk, 4: consentDone };
   const nextIncomplete = STEPS.find((s) => !stepStatus[s.step]);
 
   return (
@@ -153,7 +154,7 @@ function VerificationBanner({ community, verification }) {
       {verification && (
         <div className="mt-4 flex flex-wrap gap-2 border-t border-[#E8E1D5] pt-4">
           <Badge variant={membersOk ? "success" : "outline"}><Users size={11} />{membersOk ? `${verification.members.length} members` : "No members yet"}</Badge>
-          <Badge variant={docsOk ? "success" : "outline"}><FileText size={11} />{docsOk ? "ID uploaded" : "No document yet"}</Badge>
+          <Badge variant={idsOk ? "success" : "outline"}><FileText size={11} />{idsOk ? "IDs verified" : "ID details pending"}</Badge>
           <Badge variant={offeringsOk ? "success" : "outline"}><Gift size={11} />{offeringsOk ? `${verification.offerings.length} offerings` : "No offerings yet"}</Badge>
           <Badge variant={consentDone ? "success" : "outline"}><UserCheck size={11} />{consentDone ? "Consent accepted" : "Consent pending"}</Badge>
         </div>

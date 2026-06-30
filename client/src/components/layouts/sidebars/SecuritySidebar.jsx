@@ -92,9 +92,6 @@ export default function SecuritySidebar({ collapsed = false }) {
     return () => ctx.revert();
   }, []);
 
-  const indexCounter = useRef(0);
-  indexCounter.current = 0;
-
   return (
     <aside
       ref={sidebarRef}
@@ -107,7 +104,11 @@ export default function SecuritySidebar({ collapsed = false }) {
       }}
     >
       <nav className="flex-1 py-5 px-3 space-y-6">
-        {SECURITY_NAV.map(({ group, links }) => (
+        {SECURITY_NAV.map(({ group, links }, groupIdx) => {
+          const offset = SECURITY_NAV
+            .slice(0, groupIdx)
+            .reduce((n, g) => n + g.links.length, 0);
+          return (
           <div key={group}>
             {!collapsed && (
               <p
@@ -118,8 +119,8 @@ export default function SecuritySidebar({ collapsed = false }) {
               </p>
             )}
             <ul className="space-y-0.5">
-              {links.map(({ icon: Icon, label, to, badge }) => {
-                const flatIndex = indexCounter.current++;
+              {links.map(({ icon: Icon, label, to, badge }, linkIdx) => {
+                const flatIndex = offset + linkIdx;
 
                 return (
                   <li
@@ -196,7 +197,8 @@ export default function SecuritySidebar({ collapsed = false }) {
               })}
             </ul>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {!collapsed && (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Pencil, Trash2, Upload, CheckCircle, AlertCircle, BookOpen, Calendar, X, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, CheckCircle, AlertCircle, BookOpen, Calendar, X } from "lucide-react";
 import PageShell from "../PageShell";
 import storyService from "../../services/storyService";
 import uploadService, { UPLOAD_FOLDERS } from "../../services/uploadService";
@@ -229,7 +229,6 @@ export default function ManageStories() {
   const [stories,  setStories]  = useState([]);
   const [editing,  setEditing]  = useState(null);
   const [showForm, setShowForm] = useState(false);
-  const [previewStory, setPreviewStory] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);

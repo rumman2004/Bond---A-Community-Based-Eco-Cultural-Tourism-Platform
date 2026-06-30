@@ -3,7 +3,7 @@ import {
   Save, Upload, X, CheckCircle, AlertCircle,
   Globe, MapPin, FileText, Users, Hash, Leaf,
   Languages, Sun, Navigation, Pencil, ArrowLeft,
-  Star, Calendar, Award, Camera, CheckCheck,
+  Star, Calendar, Camera, CheckCheck,
   Clock, Loader2,
 } from "lucide-react";
 import PageShell from "../PageShell";

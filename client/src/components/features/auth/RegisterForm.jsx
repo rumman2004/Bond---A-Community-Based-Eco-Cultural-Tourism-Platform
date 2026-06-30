@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AlertCircle, User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { gsap } from "gsap";
 import { useAuth } from "../../../context/AuthContext";

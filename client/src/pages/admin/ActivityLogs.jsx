@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   AlertTriangle, ClipboardList, Settings, RefreshCw, Lock, Unlock,
-  CheckCircle, XCircle, Edit, Pin, ArrowLeft, ArrowRight, Flag,
-  Eye, EyeOff, ShieldCheck, ShieldX, UserPlus, Home, Trash2,
+  Edit, Pin, ArrowLeft, ArrowRight, Flag,
+  Eye, EyeOff, ShieldCheck, ShieldX,
 } from "lucide-react";
 import PageShell from "../PageShell";
 import api from "../../services/api";

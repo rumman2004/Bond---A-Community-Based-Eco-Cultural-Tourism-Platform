@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Bell, X } from "lucide-react";
 import { gsap } from "gsap";
 import NotificationList from "./NotificationList";
@@ -12,10 +12,21 @@ export default function NotificationBell() {
   const dropRef   = useRef(null);
   const badgeRef  = useRef(null);
 
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      // notificationService.list() → GET /notifications
+      const data = await notificationService.list();
+      const list = data?.data?.notifications || data?.notifications || [];
+      setNotifications(list);
+      setUnread(data?.data?.unread_count ?? list.filter(n => !n.is_read).length ?? 0);
+    } catch { /* ignore */ } finally { setLoading(false); }
+  }, []);
+
   // Fetch on mount and on open
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]);
 
   useEffect(() => {
     if (!dropRef.current) return;
@@ -28,7 +39,7 @@ export default function NotificationBell() {
     } else {
       gsap.to(dropRef.current, { opacity: 0, y: -6, duration: 0.18, ease: "power2.in" });
     }
-  }, [open]);
+  }, [open, fetchNotifications]);
 
   // Animate badge on unread change
   useEffect(() => {
@@ -39,17 +50,6 @@ export default function NotificationBell() {
       );
     }
   }, [unread]);
-
-  const fetchNotifications = async () => {
-    setLoading(true);
-    try {
-      // notificationService.list() → GET /notifications
-      const data = await notificationService.list();
-      const list = data?.data?.notifications || data?.notifications || [];
-      setNotifications(list);
-      setUnread(data?.data?.unread_count ?? list.filter(n => !n.is_read).length ?? 0);
-    } catch { /* ignore */ } finally { setLoading(false); }
-  };
 
   const handleRead = async (id) => {
     try {

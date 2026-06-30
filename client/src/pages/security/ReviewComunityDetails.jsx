@@ -3,9 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
-  MapPin, Mail, Phone, User, Calendar,
-  CheckCircle2, XCircle, AlertTriangle, Globe,
-  Loader2, Star, Users, Leaf, Shield, ArrowRight,
+  MapPin, Calendar,
+  CheckCircle2, XCircle, AlertTriangle,
+  Loader2, Star, Users, Shield,
   BookOpen, ChevronLeft, TrendingUp, Award, Clock,
 } from "lucide-react";
 import securityService from "../../services/securityService";
@@ -270,6 +270,18 @@ function Sk({ w = "100%", h = 20 }) {
   return <div className="rcd-skeleton" style={{ width: w, height: h }} />;
 }
 
+// Renders a "View" link to a member's ID proof (uploaded image or pasted link).
+function IdProofLink({ member }) {
+  const href = member?.id_image_url || member?.id_link;
+  if (!href) return <span style={{ color: "#B0A99E" }}>—</span>;
+  const isImage = !!member?.id_image_url;
+  return (
+    <a href={href} target="_blank" rel="noreferrer" className="rcd-doc-link" style={{ padding: "6px 14px", fontSize: 11 }}>
+      {isImage ? "View Image" : "Open Link"}
+    </a>
+  );
+}
+
 export default function ReviewCommunityDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -377,10 +389,15 @@ export default function ReviewCommunityDetails() {
   const rating = parseFloat(community.avg_rating) || 0;
   const sustainability = community.sustainability_tags?.map(t => typeof t === "string" ? t : t.label) || ["Community Led", "Eco Friendly"];
 
+  const members = verificationData?.members || [];
+  const ownerMember = members.find((m) => m.is_owner);
+  const idsComplete = members.length > 0 &&
+    members.every((m) => m.id_type && m.id_number && (m.id_image_url || m.id_link));
+
   const checklist = [
     { label: "Profile Foundation", done: true, desc: "Basic identity and branding setup." },
-    { label: "Team Structure",     done: verificationData?.members?.length > 0, desc: "Leadership and contact network established." },
-    { label: "ID Verification",    done: verificationData?.documents?.length > 0, desc: "Government IDs and legal documents uploaded." },
+    { label: "Team Structure",     done: members.length > 0, desc: "Leadership and contact network established." },
+    { label: "ID Verification",    done: idsComplete, desc: "Every member has a government ID type, number, and proof." },
     { label: "Market Readiness",   done: verificationData?.offerings?.length > 0, desc: "Experiences and services ready for listing." },
     { label: "Legal Compliance",   done: !!verificationData?.consent, desc: "Platform terms and safety guidelines accepted." },
   ];
@@ -484,6 +501,9 @@ export default function ReviewCommunityDetails() {
                       <th>Full Name</th>
                       <th>Communication</th>
                       <th>Designation</th>
+                      <th>ID Type</th>
+                      <th>ID Number</th>
+                      <th>ID Proof</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -496,12 +516,18 @@ export default function ReviewCommunityDetails() {
                         </div>
                       </td>
                       <td><span style={{ padding: "6px 14px", borderRadius: 8, background: "#FEF3C7", color: "#92400E", fontSize: 11, fontWeight: 800, textTransform: "uppercase" }}>Primary Point of Contact</span></td>
+                      <td style={{ fontWeight: 600 }}>{ownerMember?.id_type || "—"}</td>
+                      <td style={{ fontFamily: "Space Grotesk, monospace" }}>{ownerMember?.id_number || "—"}</td>
+                      <td><IdProofLink member={ownerMember} /></td>
                     </tr>
-                    {verificationData?.members?.filter(m => !m.is_owner).map((m, i) => (
+                    {members.filter(m => !m.is_owner).map((m, i) => (
                       <tr key={i}>
                         <td style={{ fontWeight: 600 }}>{m.full_name}</td>
                         <td>{m.phone}</td>
                         <td style={{ color: "#8C8479" }}>{m.role || "Team Member"}</td>
+                        <td style={{ fontWeight: 600 }}>{m.id_type || "—"}</td>
+                        <td style={{ fontFamily: "Space Grotesk, monospace" }}>{m.id_number || "—"}</td>
+                        <td><IdProofLink member={m} /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -510,31 +536,35 @@ export default function ReviewCommunityDetails() {
             </div>
           </div>
 
-          {/* Document Verification Grid */}
+          {/* Identity Verification Grid */}
           <div className="rcd-card">
             <div className="rcd-card-header">
-              <h3 className="rcd-card-title">Legal Documentation</h3>
+              <h3 className="rcd-card-title">Identity Verification</h3>
             </div>
             <div className="rcd-card-body">
-              {!verificationData?.documents?.length ? (
+              {!members.length ? (
                 <div style={{ padding: "60px 40px", textAlign: "center", background: "#FAF9F6", borderRadius: 24, border: "2px dashed #E5E7EB" }}>
                   <Shield size={48} color="#D1D5DB" strokeWidth={1} style={{ marginBottom: 16 }} />
-                  <p style={{ fontSize: 15, color: "#8C8479", fontWeight: 500 }}>No government ID documents have been submitted for review.</p>
+                  <p style={{ fontSize: 15, color: "#8C8479", fontWeight: 500 }}>No member ID details have been submitted for review.</p>
                 </div>
               ) : (
                 <div className="rcd-doc-grid">
-                  {verificationData.documents.map((doc, i) => (
+                  {members.map((m, i) => (
                     <div key={i} className="rcd-doc-item">
-                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                        <div style={{ width: 44, height: 44, borderRadius: 12, background: "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <BookOpen size={20} color="#4B5563" />
+                      <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 12, background: "#F3F4F6", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {m.id_image_url
+                            ? <img src={m.id_image_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            : <BookOpen size={20} color="#4B5563" />}
                         </div>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 700 }}>{doc.document_type || "Government ID"}</div>
-                          <div style={{ fontSize: 12, color: "#8C8479", marginTop: 2 }}>ID Verification Asset</div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700 }}>{m.full_name || "Member"}</div>
+                          <div style={{ fontSize: 12, color: "#8C8479", marginTop: 2 }}>
+                            {m.id_type || "No ID type"}{m.id_number ? ` · ${m.id_number}` : ""}
+                          </div>
                         </div>
                       </div>
-                      <a href={doc.file_url} target="_blank" rel="noreferrer" className="rcd-doc-link">View File</a>
+                      <IdProofLink member={m} />
                     </div>
                   ))}
                 </div>

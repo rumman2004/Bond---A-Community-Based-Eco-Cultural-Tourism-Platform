@@ -161,7 +161,7 @@ export default function Interests() {
           {loading ? (
             <div className="flex flex-wrap gap-3">
               {[...Array(12)].map((_, i) => (
-                <div key={i} className="h-10 rounded-full bg-[#E8E1D5] animate-pulse" style={{ width: `${80 + Math.random() * 60}px` }} />
+                <div key={i} className="h-10 rounded-full bg-[#E8E1D5] animate-pulse" style={{ width: `${80 + ((i * 23) % 60)}px` }} />
               ))}
             </div>
           ) : (

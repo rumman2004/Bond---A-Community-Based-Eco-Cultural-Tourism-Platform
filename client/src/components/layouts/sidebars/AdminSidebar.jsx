@@ -61,11 +61,6 @@ export default function AdminSidebar({ collapsed = false }) {
     return () => ctx.revert();
   }, []);
 
-  // Track a stable flat index across groups using a ref so it never
-  // triggers re-renders and is always current during the render pass.
-  const indexCounter = useRef(0);
-  indexCounter.current = 0; // reset at the top of every render
-
   return (
     <aside
       ref={sidebarRef}
@@ -78,7 +73,11 @@ export default function AdminSidebar({ collapsed = false }) {
       }}
     >
       <nav className="flex-1 py-5 px-3 space-y-6">
-        {ADMIN_NAV.map(({ group, links }) => (
+        {ADMIN_NAV.map(({ group, links }, groupIdx) => {
+          const offset = ADMIN_NAV
+            .slice(0, groupIdx)
+            .reduce((n, g) => n + g.links.length, 0);
+          return (
           <div key={group}>
             {!collapsed && (
               <p
@@ -89,9 +88,8 @@ export default function AdminSidebar({ collapsed = false }) {
               </p>
             )}
             <ul className="space-y-0.5">
-              {links.map(({ icon: Icon, label, to, badge }) => {
-                // Capture the current flat index for this item, then advance
-                const flatIndex = indexCounter.current++;
+              {links.map(({ icon: Icon, label, to, badge }, linkIdx) => {
+                const flatIndex = offset + linkIdx;
 
                 return (
                   <li
@@ -162,7 +160,8 @@ export default function AdminSidebar({ collapsed = false }) {
               })}
             </ul>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {!collapsed && (

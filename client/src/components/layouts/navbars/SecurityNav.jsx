@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
-import { Bell, ChevronDown, LogOut, ShieldCheck, User } from "lucide-react";
+import { Bell, ChevronDown, LogOut, User } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 
 export default function SecurityNav() {

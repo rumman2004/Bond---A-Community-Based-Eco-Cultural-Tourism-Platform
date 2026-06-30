@@ -7,7 +7,6 @@ import {
   Compass,
   Heart,
   LogOut,
-  Map,
   Menu,
   Search,
   User,

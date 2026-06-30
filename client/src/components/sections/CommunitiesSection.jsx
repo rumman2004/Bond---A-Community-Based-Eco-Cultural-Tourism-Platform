@@ -8,8 +8,8 @@ import {
 } from "lucide-react";
 import communityService from "../../services/communityService";
 import storyService from "../../services/storyService";
-import { Badge, Card, Loader, Avatar, Tooltip } from "../ui";
-import { Toast, ToastContainer } from "../ui";
+import { Badge, Card, Tooltip } from "../ui";
+import { ToastContainer } from "../ui";
 import { useAuth } from "../../context/AuthContext";
 
 gsap.registerPlugin(ScrollTrigger);

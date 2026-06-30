@@ -1,18 +1,17 @@
 // ============================================================
 // controllers/communityVerificationController.js
 // Handles the multi-step community registration verification flow:
-//   Step 2 — Team members + ID document upload
+//   Step 2 — Team members + per-member ID details (type/number + image|link)
 //   Step 3 — Offerings (Homestay / Food / Events) + images
 //   Step 4 — Consent / T&C acceptance
 //   GET     — Full verification progress (owner + security review)
 // ============================================================
 
 import { query, getClient } from '../config/db.js';
-import { uploadVerificationDocuments, uploadExperienceImages } from '../services/uploadService.js';
+import { uploadExperienceImages } from '../services/uploadService.js';
 import { ApiError }    from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { logger } from '../utils/logger.js';
 
 // ─── Helper: assert caller owns the community ─────────────────
 const assertOwner = async (communityId, userId) => {
@@ -45,7 +44,6 @@ export const getVerificationData = asyncHandler(async (req, res) => {
   const [
     communityResult,
     membersResult,
-    documentsResult,
     offeringsResult,
     consentResult,
   ] = await Promise.all([
@@ -58,10 +56,6 @@ export const getVerificationData = asyncHandler(async (req, res) => {
     ),
     query(
       'SELECT * FROM community_members WHERE community_id = $1 ORDER BY is_owner DESC, created_at ASC',
-      [id]
-    ),
-    query(
-      'SELECT * FROM community_documents WHERE community_id = $1 ORDER BY created_at DESC',
       [id]
     ),
     query(
@@ -96,7 +90,6 @@ export const getVerificationData = asyncHandler(async (req, res) => {
   res.json(new ApiResponse(200, {
     community,
     members:   membersResult.rows,
-    documents: documentsResult.rows,
     offerings,
     consent:   consentResult.rows[0] || null,
   }));
@@ -127,10 +120,23 @@ export const saveCommunityMembers = asyncHandler(async (req, res) => {
     const inserted = [];
     for (const m of members) {
       const r = await client.query(
-        `INSERT INTO community_members (community_id, full_name, phone, role, is_owner)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO community_members
+           (community_id, full_name, phone, role, is_owner,
+            id_type, id_number, id_image_url, id_image_public_id, id_link)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
-        [id, m.full_name.trim(), m.phone.trim(), m.role?.trim() || null, m.is_owner ?? false]
+        [
+          id,
+          m.full_name.trim(),
+          m.phone.trim(),
+          m.role?.trim() || null,
+          m.is_owner ?? false,
+          m.id_type?.trim() || null,
+          m.id_number?.trim() || null,
+          m.id_image_url?.trim() || null,
+          m.id_image_public_id?.trim() || null,
+          m.id_link?.trim() || null,
+        ]
       );
       inserted.push(r.rows[0]);
     }
@@ -139,53 +145,6 @@ export const saveCommunityMembers = asyncHandler(async (req, res) => {
     await advanceStep(id, 2);
 
     res.json(new ApiResponse(200, { members: inserted }, 'Team members saved'));
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
-});
-
-// ─── POST /communities/:id/documents ─────────────────────────
-// Upload multiple ID documents (PDFs or images).
-// Field name: 'document'   (multipart/form-data)
-// Body param: doc_type (optional, default 'id_bundle')
-export const uploadCommunityDocument = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  await assertOwner(id, req.user.id);
-
-  if (!req.files || req.files.length === 0) {
-    throw new ApiError(400, 'No document files provided');
-  }
-
-  const docType = req.body.doc_type || 'id_bundle';
-  const insertedDocuments = [];
-
-  const client = await getClient();
-  try {
-    await client.query('BEGIN');
-    
-    // Upload all documents to Cloudinary in parallel
-    const buffers = req.files.map((f) => f.buffer);
-    const uploadedFiles = await uploadVerificationDocuments(buffers, id);
-
-    for (const uploaded of uploadedFiles) {
-      const result = await client.query(
-        `INSERT INTO community_documents
-           (community_id, doc_type, file_url, file_public_id, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
-        [id, docType, uploaded.url, uploaded.publicId, req.user.id]
-      );
-      insertedDocuments.push(result.rows[0]);
-      logger.info(`Community document uploaded: community=${id} document=${result.rows[0].id} public_id=${uploaded.publicId}`);
-    }
-
-    await client.query('COMMIT');
-    await advanceStep(id, 2);
-
-    res.status(201).json(new ApiResponse(201, { documents: insertedDocuments }, `${insertedDocuments.length} document(s) uploaded`));
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

@@ -2,22 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import {
-  ChevronRight,
-  Compass,
   MapPin,
   Sparkles,
   Star,
-  TrendingUp,
-  Users,
-  Shield,
-  Leaf,
   Globe,
   ArrowRight,
   Search,
-  BookOpen,
   Calendar,
   Heart,
-  Clock,
   User,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -32,7 +24,7 @@ export default function TouristDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [communities, setCommunities] = useState([]);
-  const [stories, setStories] = useState([]);
+  const [, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const heroRef = useRef(null);

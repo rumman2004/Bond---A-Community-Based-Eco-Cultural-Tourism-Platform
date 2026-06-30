@@ -48,17 +48,11 @@ export default function Dropdown({
     };
   }, [open]);
 
-  // Focus first item when menu opens
-  useEffect(() => {
-    if (open) setFocusedIdx(-1);
-  }, [open]);
-
-  const actionItems = items.filter((i) => !i.divider);
-
   const handleKeyDown = (e) => {
     if (!open) {
       if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
         e.preventDefault();
+        setFocusedIdx(-1);
         setOpen(true);
       }
       return;
@@ -104,7 +98,7 @@ export default function Dropdown({
       {/* Trigger */}
       <div
         className="bond-dd-trigger"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => { if (!open) setFocusedIdx(-1); setOpen((v) => !v); }}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}

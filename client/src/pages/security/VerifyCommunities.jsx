@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
 import {
   ShieldCheck, Users, FileText, Gift, Lock,
-  MapPin, ChevronRight, Loader2, RefreshCw, AlertTriangle,
+  MapPin, ChevronRight, Loader2, AlertTriangle,
   Search, Building2,
 } from "lucide-react";
 import securityService from "../../services/securityService";
@@ -39,7 +39,7 @@ export default function VerifyCommunities() {
   const [loading,         setLoading]         = useState(true);
   const [error,           setError]           = useState(null);
   const [search,          setSearch]          = useState("");
-  const [filter,          setFilter]          = useState("all");
+  const [filter]                              = useState("all");
   const [verificationMap, setVerificationMap] = useState({});
 
   const cardsRef = useRef([]);
@@ -119,16 +119,18 @@ export default function VerifyCommunities() {
   // ── Chips for a community ─────────────────────────────────
   const getChips = (c) => {
     const v = verificationMap[c.id];
-    const membersCount   = v?.members?.length   ?? 0;
-    const docsCount      = v?.documents?.length ?? 0;
+    const memberList     = v?.members ?? [];
+    const membersCount   = memberList.length;
+    const idsDone        = memberList.filter((m) => m.id_type && m.id_number && (m.id_image_url || m.id_link)).length;
+    const idsOk          = membersCount > 0 && idsDone === membersCount;
     const offeringsCount = v?.offerings?.length ?? 0;
     const consentOk      = !!c.consent_accepted_at;
     const regStep        = c.registration_step ?? 1;
 
-    const checks = [regStep > 1, membersCount > 0, docsCount > 0, offeringsCount > 0, consentOk];
+    const checks = [regStep > 1, membersCount > 0, idsOk, offeringsCount > 0, consentOk];
     const pct    = Math.round((checks.filter(Boolean).length / checks.length) * 100);
 
-    return { membersCount, docsCount, offeringsCount, consentOk, pct };
+    return { membersCount, idsDone, idsOk, offeringsCount, consentOk, pct };
   };
 
   // ── Loading ────────────────────────────────────────────────
@@ -243,7 +245,7 @@ export default function VerifyCommunities() {
 
           const status = c.status ?? "pending";
           const cfg    = STATUS_CFG[status] ?? STATUS_CFG.pending;
-          const { membersCount, docsCount, offeringsCount, consentOk, pct } = getChips(c);
+          const { membersCount, idsDone, idsOk, offeringsCount, consentOk, pct } = getChips(c);
           const place  = [c.village, c.district, c.state].filter(Boolean).join(", ");
 
           return (
@@ -304,7 +306,7 @@ export default function VerifyCommunities() {
 
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <Chip ok={membersCount > 0}   label={`${membersCount} Member${membersCount !== 1 ? "s" : ""}`}   icon={Users} />
-                  <Chip ok={docsCount > 0}       label={`${docsCount} Doc${docsCount !== 1 ? "s" : ""}`}           icon={FileText} />
+                  <Chip ok={idsOk}       label={`${idsDone}/${membersCount} IDs`}           icon={FileText} />
                   <Chip ok={offeringsCount > 0}  label={`${offeringsCount} Offering${offeringsCount !== 1 ? "s" : ""}`} icon={Gift} />
                   <Chip ok={consentOk}           label={consentOk ? "Consent ✓" : "No Consent"}                   icon={Lock} />
                 </div>

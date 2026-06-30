@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Map, Search, Loader2 } from "lucide-react";
 import { gsap } from "gsap";
 import mapService from "../../../services/mapService";
@@ -29,21 +29,7 @@ export default function MapView({ communities = [], onSelect, center }) {
     return () => ctx.revert();
   }, []);
 
-  // Try to init Leaflet
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.L) { initLeaflet(); return; }
-    const link   = document.createElement("link");
-    link.rel     = "stylesheet";
-    link.href    = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-    document.head.appendChild(link);
-    const script = document.createElement("script");
-    script.src   = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-    script.onload = initLeaflet;
-    document.head.appendChild(script);
-  }, []);
-
-  const initLeaflet = () => {
+  const initLeaflet = useCallback(() => {
     if (mapRef.current || !document.getElementById("bond-map")) return;
     const L = window.L;
     const defaultCenter = center || mapService.DEFAULT_CENTER || { lat: 26.2, lng: 92.9 };
@@ -67,7 +53,21 @@ export default function MapView({ communities = [], onSelect, center }) {
       marker.bindPopup(`<strong>${c.name}</strong><br/>${c.village || ""}`);
       marker.on("click", () => { setActiveId(c.id); onSelect?.(c); });
     });
-  };
+  }, [center, communities, onSelect]);
+
+  // Try to init Leaflet
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.L) { initLeaflet(); return; }
+    const link   = document.createElement("link");
+    link.rel     = "stylesheet";
+    link.href    = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    document.head.appendChild(link);
+    const script = document.createElement("script");
+    script.src   = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.onload = initLeaflet;
+    document.head.appendChild(script);
+  }, [initLeaflet]);
 
   const handleSearch = async (e) => {
     e.preventDefault();

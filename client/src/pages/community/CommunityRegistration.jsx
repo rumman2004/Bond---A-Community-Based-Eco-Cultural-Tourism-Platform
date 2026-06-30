@@ -7,10 +7,10 @@
 // ============================================================
 
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   CheckCircle, AlertCircle, ChevronRight, ChevronLeft, Loader2,
-  Shield, Clock, Search, Bell, ArrowRight, FileCheck,
+  Shield, Search, Bell, ArrowRight, FileCheck,
 } from "lucide-react";
 import communityService from "../../services/communityService";
 import { WIZARD_STEPS } from "../../utils/verificationConstants";
@@ -73,7 +73,6 @@ const EMPTY_FORM = {
 };
 
 export default function CommunityRegistration() {
-  const navigate = useNavigate();
 
   const [step,      setStep]      = useState(1);
   const [commId,    setCommId]    = useState(null);
@@ -92,9 +91,11 @@ export default function CommunityRegistration() {
   const [form,      setForm]      = useState(EMPTY_FORM);
 
   // Step 2 state
-  const [members,   setMembers]   = useState([{ full_name: "", phone: "", role: "", is_owner: true }]);
-  const [docFiles,  setDocFiles]  = useState([]);
-  const [savedDocs, setSavedDocs] = useState([]);
+  const [members,   setMembers]   = useState([{
+    full_name: "", phone: "", role: "", is_owner: true,
+    id_type: "", id_number: "",
+    id_image_url: "", id_image_public_id: "", id_link: "",
+  }]);
 
   // Step 3 state
   const [offerings, setOfferings] = useState([]);
@@ -148,10 +149,13 @@ export default function CommunityRegistration() {
               phone:     m.phone ?? "",
               role:      m.role ?? "",
               is_owner:  m.is_owner ?? false,
+              id_type:            m.id_type ?? "",
+              id_number:          m.id_number ?? "",
+              id_image_url:       m.id_image_url ?? "",
+              id_image_public_id: m.id_image_public_id ?? "",
+              id_link:            m.id_link ?? "",
             })));
           }
-
-          if (v.documents?.length > 0) setSavedDocs(v.documents);
 
           if (v.offerings?.length > 0) {
             setOfferings(v.offerings.map((o) => ({
@@ -186,9 +190,12 @@ export default function CommunityRegistration() {
       if (!form.state)              errs.state       = "State is required";
     }
     if (step === 2) {
-      const hasInvalid = members.some((m) => !m.full_name.trim() || !m.phone.trim());
-      if (hasInvalid) errs.members = "All members must have a name and phone number";
-      if (docFiles.length === 0 && savedDocs.length === 0) errs.doc = "Please upload at least one ID document";
+      const missingBasics = members.some((m) => !m.full_name.trim() || !m.phone.trim());
+      const missingId     = members.some((m) => !m.id_type?.trim() || !m.id_number?.trim());
+      const missingProof  = members.some((m) => !m.id_image_url && !m.id_link?.trim());
+      if (missingBasics)      errs.members = "Every member needs a name and phone number";
+      else if (missingId)     errs.members = "Every member needs an ID type and ID number";
+      else if (missingProof)  errs.members = "Every member needs an ID image or a document link";
     }
     if (step === 3) {
       if (offerings.length === 0) errs.offerings = "Please add at least one offering";
@@ -200,31 +207,6 @@ export default function CommunityRegistration() {
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
-  };
-
-  // ── Required ID document uploader ───────────────────────────
-  const uploadDocumentsNow = async (currentCommId, files) => {
-    if (!currentCommId) throw new Error("Community profile is not ready yet. Please save Step 1 again.");
-    if (!files || files.length === 0) return null;
-
-    setUploading(true);
-    setUploadMsg(`Uploading ${files.length} document(s)...`);
-
-    try {
-      const fd = new FormData();
-      files.forEach((f) => fd.append("document", f));
-      fd.append("doc_type", "id_bundle");
-
-      const res = await communityService.uploadDocument(currentCommId, fd);
-      const newDocs = res?.data?.documents || [];
-
-      setSavedDocs((prev) => [...newDocs, ...prev]);
-      setDocFiles([]);
-      return newDocs;
-    } finally {
-      setUploading(false);
-      setUploadMsg("");
-    }
   };
 
   // ── Background image uploader (doesn't block step transition) ─
@@ -289,15 +271,11 @@ export default function CommunityRegistration() {
         }
       }
 
-      // ── Step 2 → save members, then upload required ID doc before continuing
+      // ── Step 2 → save members with their ID details ─────────
       if (step === 2) {
         if (!commId) throw new Error("Community profile is not ready yet. Please save Step 1 again.");
         await communityService.saveMembers(commId, members);
-
-        if (docFiles.length > 0) {
-          await uploadDocumentsNow(commId, docFiles);
-          setToast({ type: "success", message: "✓ ID documents uploaded and saved", key: Date.now() });
-        }
+        setToast({ type: "success", message: "✓ Team & ID details saved", key: Date.now() });
       }
 
       // ── Step 3 → save offerings (fast), upload images in background
@@ -549,8 +527,6 @@ export default function CommunityRegistration() {
           {step === 2 && (
             <Step2TeamAndDocs
               members={members} setMembers={setMembers}
-              docFiles={docFiles} setDocFiles={setDocFiles}
-              savedDocs={savedDocs}
               errors={errors}
             />
           )}

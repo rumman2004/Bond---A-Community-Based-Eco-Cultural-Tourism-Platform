@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
-import { Map, Bell, ChevronDown, LogOut, Shield, User, Settings } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Shield, User, Settings } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 
 export default function AdminNav() {
@@ -59,7 +59,7 @@ export default function AdminNav() {
     setProfileOpen(false);
     try {
       await logout?.();
-    } catch (_) {
+    } catch {
       // ignore
     }
     navigate("/login");

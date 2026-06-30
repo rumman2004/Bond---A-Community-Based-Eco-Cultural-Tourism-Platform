@@ -15,7 +15,6 @@ import gsap from "gsap";
  */
 
 function getPageRange(current, total, siblings = 1) {
-  const delta = siblings + 2;
   const range = [];
   const rangeWithDots = [];
   let l;
@@ -47,7 +46,6 @@ export default function Pagination({
   totalPages,
   onPageChange,
   siblings = 1,
-  showEdges = true,
   className = "",
 }) {
   const wrapRef = useRef(null);

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { gsap } from "gsap";
 import {
   Search, X, BookOpen, Clock, Eye, User, MapPin,
-  Grid3X3, List, Tag, ArrowRight, Feather, SlidersHorizontal,
+  Grid3X3, List, Feather, SlidersHorizontal,
   ChevronLeft, ChevronRight, Sparkles, TrendingUp,
 } from "lucide-react";
 import storyService from "../../services/storyService";
@@ -216,7 +216,6 @@ function StoryCard({ story, view }) {
    STORIES PAGE — main export
 ════════════════════════════════════════════════════════ */
 export default function Stories() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [activeTag, setActiveTag] = useState("All");

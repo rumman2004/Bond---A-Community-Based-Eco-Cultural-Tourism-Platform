@@ -6,8 +6,11 @@
 
 import { body } from 'express-validator';
 
-// ── Step 2A: Team members ─────────────────────────────────────
-// Body: { members: [{ full_name, phone, role?, is_owner? }] }
+// ── Step 2A: Team members + per-member ID details ─────────────
+// Body: { members: [{ full_name, phone, role?, is_owner?,
+//                      id_type, id_number, id_image_url?, id_link? }] }
+const VALID_ID_TYPES = ['Aadhaar', 'PAN', 'Passport', 'Voter ID', 'Driving License'];
+
 export const membersSchema = [
   body('members')
     .isArray({ min: 1 })
@@ -32,6 +35,30 @@ export const membersSchema = [
   body('members.*.is_owner')
     .optional()
     .isBoolean().withMessage('is_owner must be boolean'),
+
+  body('members.*.id_type')
+    .trim()
+    .notEmpty().withMessage('Each member must have an ID type')
+    .isIn(VALID_ID_TYPES).withMessage(`ID type must be one of: ${VALID_ID_TYPES.join(', ')}`),
+
+  body('members.*.id_number')
+    .trim()
+    .notEmpty().withMessage('Each member must have an ID number')
+    .isLength({ max: 50 }).withMessage('ID number must be under 50 characters'),
+
+  body('members.*.id_link')
+    .optional({ checkFalsy: true })
+    .trim()
+    .isURL().withMessage('ID link must be a valid URL')
+    .isLength({ max: 1000 }).withMessage('ID link is too long'),
+
+  // Each member needs at least one form of ID proof: an uploaded image or a link.
+  body('members.*').custom((member) => {
+    if (!member?.id_image_url && !member?.id_link) {
+      throw new Error('Each member must have an ID image or an ID link');
+    }
+    return true;
+  }),
 ];
 
 // ── Step 3: Offerings ─────────────────────────────────────────

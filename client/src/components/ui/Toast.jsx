@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { CheckCircle, AlertCircle, Info, AlertTriangle, X } from "lucide-react";
 import gsap from "gsap";
 
@@ -54,6 +54,16 @@ export function Toast({ id, type = "info", title, message, duration = 4000, onCl
   const cfg = configs[type];
   const Icon = cfg.icon;
 
+  const dismiss = useCallback(() => {
+    gsap.to(toastRef.current, {
+      x: 60,
+      opacity: 0,
+      duration: 0.3,
+      ease: "power2.in",
+      onComplete: () => onClose?.(id),
+    });
+  }, [id, onClose]);
+
   useEffect(() => {
     const el = toastRef.current;
 
@@ -78,17 +88,7 @@ export function Toast({ id, type = "info", title, message, duration = 4000, onCl
         }
       );
     }
-  }, []);
-
-  const dismiss = () => {
-    gsap.to(toastRef.current, {
-      x: 60,
-      opacity: 0,
-      duration: 0.3,
-      ease: "power2.in",
-      onComplete: () => onClose?.(id),
-    });
-  };
+  }, [duration, dismiss]);
 
   return (
     <div

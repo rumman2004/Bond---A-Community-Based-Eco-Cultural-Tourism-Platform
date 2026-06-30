@@ -1,19 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
 import {
   AlertTriangle,
-  CheckCircle2,
   Clock,
   Inbox,
   ChevronDown,
-  ChevronUp,
   Loader2,
   ShieldAlert,
   Info,
   UserX,
-  ArrowRight,
   ShieldCheck,
   Search,
-  X,
 } from "lucide-react";
 import securityService from "../../services/securityService";
 import api from "../../services/api";
@@ -46,7 +42,7 @@ function StatusBadge({ status }) {
   );
 }
 
-function ReportCard({ report, onStatusChange, onInspectCommunity }) {
+function ReportCard({ report, onStatusChange }) {
   const [expanded, setExpanded] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -54,8 +50,9 @@ function ReportCard({ report, onStatusChange, onInspectCommunity }) {
   const reasonCfg = REASON_ICONS[reason?.toLowerCase()] ?? REASON_ICONS.other;
   const ReasonIcon = reasonCfg.icon;
 
+  const [now] = useState(() => Date.now());
   const age = created_at
-    ? Math.floor((Date.now() - new Date(created_at)) / 86400000)
+    ? Math.floor((now - new Date(created_at)) / 86400000)
     : null;
 
   const handleStatus = async (newStatus) => {

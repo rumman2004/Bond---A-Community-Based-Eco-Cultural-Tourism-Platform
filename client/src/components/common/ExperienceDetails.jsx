@@ -64,7 +64,7 @@ export default function ExperienceDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const [exp, setExp]           = useState(null);
   const [reviews, setReviews]   = useState([]);

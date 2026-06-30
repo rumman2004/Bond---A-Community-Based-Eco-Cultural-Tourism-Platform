@@ -14,7 +14,6 @@ import {
 import {
   getVerificationData,
   saveCommunityMembers,
-  uploadCommunityDocument,
   saveCommunityOfferings,
   uploadOfferingImages,
   recordConsent,
@@ -25,7 +24,6 @@ import { validate }      from '../middlewares/validateRequest.js';
 import {
   uploadSingle,
   uploadMultiple,
-  uploadDocument,
   uploadOfferingImages as multerOfferingImages,
   handleUpload,
 } from '../middlewares/uploadMiddleware.js';
@@ -127,15 +125,6 @@ router.post(
   authorize('community'),
   validate(membersSchema),
   saveCommunityMembers
-);
-
-// Step 2B — upload ID bundle PDF
-router.post(
-  '/:id/documents',
-  authenticate,
-  authorize('community'),
-  handleUpload(uploadDocument),
-  uploadCommunityDocument
 );
 
 // Step 3A — save offerings

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import {
-  Calendar, MapPin, Users, IndianRupee, Clock, CheckCircle,
-  XCircle, AlertCircle, Hourglass, ChevronRight, Inbox, FileText,
+  Calendar, MapPin, Users, IndianRupee, CheckCircle,
+  XCircle, AlertCircle, Hourglass, Inbox, FileText,
   Star
 } from "lucide-react";
 import bookingService from "../../services/bookingService";
@@ -22,7 +22,6 @@ const FILTERS = ["all", "pending", "confirmed", "completed", "cancelled"];
 function BookingCard({ booking, index, onCancel, onReviewOpen }) {
   const ref = useRef(null);
   const cfg = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
-  const Icon = cfg.icon;
   const [cancelling, setCancelling] = useState(false);
 
   const handleCancel = async (e) => {

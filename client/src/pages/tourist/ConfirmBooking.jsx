@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
-import { CheckCircle, AlertCircle, Calendar, Users, ArrowRight, Shield, MapPin, Star, Upload } from "lucide-react";
+import { AlertCircle, Calendar, Users, ArrowRight, Shield, MapPin, Star, Upload } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import bookingService from "../../services/bookingService";
 import experienceService from "../../services/experienceService";

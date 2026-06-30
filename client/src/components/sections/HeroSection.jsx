@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
-import { MapPin, Compass, Leaf, Star, ArrowRight, Users, Search, TrendingUp, Sparkles, Map } from "lucide-react";
+import { Compass, Leaf, Star, ArrowRight, Users, Search, TrendingUp, Sparkles, Map } from "lucide-react";
 import communityService from "../../services/communityService";
 import { Badge, Avatar, Tooltip } from "../ui";
-import { Toast, ToastContainer } from "../ui";
+import { ToastContainer } from "../ui";
 
 const STATS = [
   { value: "240+", label: "Communities", icon: <Users size={14} /> },
@@ -30,9 +30,10 @@ export default function HeroSection() {
   const [communities, setCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
+  const toastSeq = useRef(0);
 
   const addToast = (toast) => {
-    const id = Date.now();
+    const id = ++toastSeq.current;
     setToasts((prev) => [...prev, { ...toast, id }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
   };
