@@ -24,14 +24,12 @@ const poolConfig = (!env.isProd && env.DB_HOST)
 
 const pool = new Pool({
   ...poolConfig,
-  max:                     10,
+  // Vercel serverless: each invocation is short-lived, keep pool small
+  max:                     env.isProd ? 1 : 10,
   min:                     0,
-  idleTimeoutMillis:       5_000,    // Release idle clients faster (Supabase kills them at ~30s)
-  connectionTimeoutMillis: 30_000,
-  allowExitOnIdle:         false,
-  // TCP keepalive — prevents Supabase/cloud providers from terminating idle connections
-  keepAlive:               true,
-  keepAliveInitialDelayMillis: 5_000,
+  idleTimeoutMillis:       env.isProd ? 0 : 5_000,
+  connectionTimeoutMillis: 10_000,
+  allowExitOnIdle:         true,
 });
 
 pool.on('connect', () => {
