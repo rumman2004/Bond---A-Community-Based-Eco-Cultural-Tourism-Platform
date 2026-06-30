@@ -32,15 +32,12 @@ const prodFormat = combine(
 
 const isProd = env.isProd;
 
-export const logger = winston.createLogger({
-  level: env.isProd ? 'info' : 'debug',
-  format: env.isProd ? prodFormat : devFormat,
-  transports: [
-    new winston.transports.Console(),
+// In production (e.g. Vercel), the filesystem is read-only — skip file transports.
+// Only write to files locally in development.
+const transports = [new winston.transports.Console()];
 
-    // File transports — match the paths in your project structure:
-    //   server/src/logs/error.log
-    //   server/src/logs/activity.log
+if (!isProd) {
+  transports.push(
     new winston.transports.File({
       filename: 'src/logs/error.log',
       level: 'error',
@@ -48,6 +45,12 @@ export const logger = winston.createLogger({
     new winston.transports.File({
       filename: 'src/logs/activity.log',
       level: 'info',
-    }),
-  ],
+    })
+  );
+}
+
+export const logger = winston.createLogger({
+  level: isProd ? 'info' : 'debug',
+  format: isProd ? prodFormat : devFormat,
+  transports,
 });
