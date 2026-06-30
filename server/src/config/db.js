@@ -6,8 +6,9 @@ const { Pool } = pg;
 
 const useSSL = env.DB_SSL === true || env.DB_SSL === 'true' || env.isProd;
 
-// Always prefer individual DB_* vars over DATABASE_URL
-const poolConfig = env.DB_HOST
+// In production (Vercel), always prefer DATABASE_URL (Supabase connection pooler).
+// The direct DB hostname (DB_HOST) is not reachable from Vercel serverless functions.
+const poolConfig = (!env.isProd && env.DB_HOST)
   ? {
       host:     env.DB_HOST,
       port:     Number(env.DB_PORT) || 5432,
@@ -18,7 +19,7 @@ const poolConfig = env.DB_HOST
     }
   : {
       connectionString: env.DATABASE_URL,
-      ssl: useSSL ? { rejectUnauthorized: false } : false,
+      ssl: { rejectUnauthorized: false },
     };
 
 const pool = new Pool({
